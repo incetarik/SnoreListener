@@ -20,6 +20,13 @@ public class Timer implements Runnable {
         this.sb = new StringBuilder();
     }
 
+    /**
+     * Formats the total seconds in "HH:MM:SS" format
+     *
+     * @param totalSeconds Total second to be converted
+     *
+     * @return Formatted string of total seconds
+     */
     public static String prettify(int totalSeconds) {
         int seconds = totalSeconds;
         int minutes = totalSeconds / 60;
@@ -94,6 +101,10 @@ public class Timer implements Runnable {
         reset(0);
     }
 
+    /**
+     * Resets current timer after given milliseconds
+     * @param resetDelay Reset delay of milliseconds
+     */
     public void reset(long resetDelay) {
         stop();
         delay = resetDelay;
@@ -117,19 +128,27 @@ public class Timer implements Runnable {
             handler.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
+                    // If it is working
                     if (!isWorking) return;
 
+                    // And currently increased seconds is 60
                     if (++seconds == 60) {
+                        // And currently increased minutes is 60
                         if (++minutes == 60) {
+                            // Increase hours by 1
                             hours++;
 
+                            // Set current minutes as 0
                             minutes = 0;
                         }
 
+                        // Set current seconds as 0
                         seconds = 0;
                     }
 
+                    // For each registered tick events
                     for (Runnable runnable : onTickEvents) {
+                        // Invoke on ui thread
                         onUiThread.call(runnable);
                     }
                 }
@@ -137,6 +156,9 @@ public class Timer implements Runnable {
         }
     }
 
+    /**
+     * Stops current timer
+     */
     public void stop() {
         isStarted = false;
         isWorking = false;

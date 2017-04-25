@@ -27,7 +27,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -77,8 +76,10 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity);
 
+        // If we do not have taken permissions from the user, request them
         if (!checkPermission()) requestPermission();
 
+        // Init essential components and variables
         initEssentials();
 
         ((ViewPager) findViewById(R.id.viewPager)).setAdapter(new PagerAdapter() {
@@ -92,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 LayoutInflater inflater = LayoutInflater.from(getBaseContext());
                 ViewGroup      layout   = null;
 
+                // Depending to position, inflate the related layout and invoke the related function
                 switch (position) {
                     case 0:
                         layout = (ViewGroup) inflater.inflate(R.layout.page_main, container, false);
@@ -114,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
                 }
 
+                // Add the drawn layout to current container
                 container.addView(layout);
 
                 return layout;
@@ -138,6 +141,8 @@ public class MainActivity extends AppCompatActivity {
                         return "Alarms";
                     case 2:
                         return "Records";
+                    case 3:
+                        return "Statistics";
                     default:
                         return "";
                 }
@@ -145,6 +150,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Initializes the main page here
+     *
+     * @param view Inflated view of the main page
+     */
     private void initMainPage(View view) {
         ivRecordButton = (ImageView) view.findViewById(R.id.ivRecordButton);
         tvRecordDuration = (TextView) view.findViewById(R.id.tvRecordDuration);
@@ -159,6 +169,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // NOTE: We may face a situation that, when recording started and microphone icon
+        // started blinking, after changing page from the main page and return back,
+        // due to the function 'destroyItem' of view pager, we have to reinitialize all views
+        // as seen here but to prevent overlaps and repeating / resetting views, we have to
+        // block reinitialization of some components and their properties such as drawable of
+        // ivRecordButton
         if (!isRecording) {
             ivRecordButton.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.mic));
         }
@@ -178,13 +194,17 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // To prevent starting timer again in further re-drawing of this page, a check is needed
+        // whether timer is null
         if (timer == null) {
+            // Init and let an action that allows timer to run any runnable on ui
             timer = new Timer(new Action<Runnable>() {
                 @Override
                 public void call(Runnable obj) {
                     runOnUiThread(obj);
                 }
             }).addOnTickListener(new Runnable() {
+                // Drawable field for further replacement of the ivRecordButton content
                 Drawable drawable;
 
                 @Override
@@ -204,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            // Let and allow alarm manager to use this timer
             AlarmManager.Timer = timer;
         }
 
@@ -215,18 +236,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Due to the further initialization of this page, we may have switched the button before
+        // and should re-draw it
         switchVibration.setChecked(isVibrationEnabled);
     }
 
+    /**
+     * Initializes the alarm page
+     * @param view Inflated view of the alarm page
+     */
     private void initAlarmsPage(View view) {
+        // If we have initialized before, return
         if (rvAlarms != null) return;
 
         rvAlarms = (RecyclerView) view.findViewById(R.id.rvAlarms);
         rvAlarms.setLayoutManager(new LinearLayoutManager(this));
         rvAlarms.setAdapter(new AlarmAdapter(rvAlarms, getFragmentManager()));
+
+        // No need to add pre-saved files here for alarms, since it is handled by AlarmManager by
+        // initEssentials() function
     }
 
+    /**
+     * Initializes the records page
+     * @param view Inflated view of the records page
+     */
     private void initRecordsPage(View view) {
+        // If we have initialized before, return
         if (rvRecords != null) return;
 
         rvRecords = (RecyclerView) view.findViewById(R.id.rvRecords);
@@ -236,12 +272,20 @@ public class MainActivity extends AppCompatActivity {
         addPreSavedFiles();
     }
 
+    /**
+     * Adds saved files of records here
+     */
     private void addPreSavedFiles() {
+        // Get the directory
         File directory = new File(Environment.getExternalStorageDirectory().getPath());
         if (directory.listFiles() == null) return;
 
+        // And if it is not null (then we are here), list the files inside
         for (File file : directory.listFiles()) {
+            // For each 'file's absolute path
             String filePath = file.getAbsolutePath();
+
+            // If it does NOT contain 'record-' prefix and '.aud' suffix, continue with next loop
             if (!filePath.contains("record-") || !filePath.endsWith(".aud")) continue;
 
             String[] info = filePath.split("-");
@@ -250,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
                 continue;
             }
 
+            // Create Record and its information here
             Date recordDate   = new Date(Long.parseLong(info[1]));
             int  recordLength = Integer.parseInt(info[2].substring(0, info[2].indexOf('.')));
 
@@ -258,14 +303,26 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Initializes the statistics page
+     * @param view Inflated view of the statistics page
+     */
     private void initStatisticsPage(View view) {
 
     }
 
+    /**
+     * Initializes the essential components and variables of the class:
+     * - AudioRecorder
+     * - Vibrator Service
+     * - Alarm Manager
+     * - Sound Level Listener
+     */
     private void initEssentials() {
         recorder = new AudioRecorder();
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
+        // Let AlarmManager get context whenever it needs
         AlarmManager.ContextGetter = new Function<Context>() {
             @Override
             public Context call() {
@@ -273,6 +330,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        // Create binding for alarms that, when added or removed, update tvAlarmsInfo view
         AlarmManager.setOnAlarmAddedListener(new Runnable() {
             @Override
             public void run() {
@@ -280,13 +338,16 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Let AlarmManager load previously saved alarms
         AlarmManager.loadSavedAlarms(this);
 
+        // Sound level listener
         recorder.setListener(new SoundLevelListener() {
             @Override
             public void onMeasure(final double db) {
                 Log.d("dB", String.valueOf(db));
 
+                // Send dB information to the soundMeter view
                 soundMeter.post(new Runnable() {
                     @Override
                     public void run() {
@@ -294,6 +355,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
+                // If current dB is not enough to vibrate
                 if (db < AudioRecorder.DB_LEVEL_TO_VIBRATE) {
                     // trySaveRecord();
 
@@ -302,14 +364,19 @@ public class MainActivity extends AppCompatActivity {
                         vibrator.cancel();
                     }
 
+                    // -1 is an indicator that when it is, recorder will set 'NOW' as currently
+                    // recording Record object start date
                     recorder.setRecordingStartDate(-1);
                 }
                 else {
+                    // As shown here
                     if (recorder.getRecordingStartDate() == -1) {
                         recorder.setRecordingStartDate(new Date().getTime());
                     }
 
+                    // For each collected (short type as) bytes
                     for (byte currentByte : AudioRecorder.short2byte(recorder.getBuffer())) {
+                        // save them temporarily
                         recorder.getRecordingBytes().add(currentByte);
                     }
 
@@ -396,12 +463,16 @@ public class MainActivity extends AppCompatActivity {
         try {
             fos = new FileOutputStream(record.getFileName());
 
-            byte[] bytesToWrite = new byte[recordingBytes.size()];
+            /*byte[] bytesToWrite = new byte[recordingBytes.size()];
             for (int i = 0; i < recordingBytes.size(); i++) {
                 bytesToWrite[i] = recordingBytes.get(i);
+            }*/
+
+            for (Byte currentByte : recordingBytes) {
+                fos.write(currentByte.intValue());
             }
 
-            fos.write(bytesToWrite);
+            // fos.write(bytesToWrite);
             fos.flush();
         }
         catch (IOException e) {
@@ -427,37 +498,5 @@ public class MainActivity extends AppCompatActivity {
         });
 
         recordingBytes.clear();
-    }
-
-    private void moveFile(String inputPath, String outputPath) {
-        File inputFile = new File(inputPath), outputFile = new File(outputPath);
-
-        if (!inputFile.exists()) return;
-        byte[] buffer = new byte[1024];
-
-        FileInputStream  fis = null;
-        FileOutputStream fos = null;
-
-        try {
-            fis = new FileInputStream(inputFile);
-            fos = new FileOutputStream(outputFile);
-
-            int read;
-            while ((read = fis.read(buffer)) != -1) {
-                fos.write(buffer, 0, read);
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        finally {
-            try {
-                if (fis != null) fis.close();
-                if (fos != null) fos.close();
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }
