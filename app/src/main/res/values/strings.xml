@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Snore Listener</string>
+    <string name="alarms_count">You have %d alarms set</string>
+    <string name="start_recording">Start Recording</string>
+    <string name="duration_initial">00:00:00</string>
+    <string name="page_main_title">Ridvan Akbazli Snore Listener</string>
+    <string name="vibration">Vibration</string>
+    <string name="title">Title</string>
+    <string name="date">Date</string>
+    <string name="enable_or_disable_the_alarm">Enable or disable the alarm</string>
+    <string name="add_an_alarm">Add an Alarm</string>
+</resources>
