@@ -43,6 +43,7 @@ import ridvan.snorelistener.objects.AlarmManager;
 import ridvan.snorelistener.objects.AudioRecorder;
 import ridvan.snorelistener.objects.Record;
 import ridvan.snorelistener.objects.RecordAdapter;
+import ridvan.snorelistener.objects.StatisticsAdapter;
 import ridvan.snorelistener.views.SoundMeterView;
 
 import static android.Manifest.permission.RECORD_AUDIO;
@@ -58,8 +59,10 @@ public class MainActivity extends AppCompatActivity {
 
     private RecyclerView rvRecords;
     private RecyclerView rvAlarms;
+    private RecyclerView rvStatistics;
 
-    private RecordAdapter recordAdapter;
+    private RecordAdapter     recordAdapter;
+    private StatisticsAdapter statisticsAdapter;
 
     private Timer    timer;
     private Vibrator vibrator;
@@ -85,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         ((ViewPager) findViewById(R.id.viewPager)).setAdapter(new PagerAdapter() {
             @Override
             public int getCount() {
-                return 3;
+                return 4;
             }
 
             @Override
@@ -247,7 +250,13 @@ public class MainActivity extends AppCompatActivity {
      */
     private void initAlarmsPage(View view) {
         // If we have initialized before, return
-        if (rvAlarms != null) return;
+        if (rvAlarms != null) {
+            if (rvAlarms.getAdapter() == null) {
+                rvAlarms.setAdapter(new AlarmAdapter(rvAlarms, getFragmentManager()));
+            }
+
+            return;
+        }
 
         rvAlarms = (RecyclerView) view.findViewById(R.id.rvAlarms);
         rvAlarms.setLayoutManager(new LinearLayoutManager(this));
@@ -263,7 +272,13 @@ public class MainActivity extends AppCompatActivity {
      */
     private void initRecordsPage(View view) {
         // If we have initialized before, return
-        if (rvRecords != null) return;
+        if (rvRecords != null) {
+            if (recordAdapter == null) {
+                recordAdapter = new RecordAdapter(rvRecords);
+            }
+
+            return;
+        }
 
         rvRecords = (RecyclerView) view.findViewById(R.id.rvRecords);
         rvRecords.setLayoutManager(new LinearLayoutManager(this));
@@ -308,7 +323,18 @@ public class MainActivity extends AppCompatActivity {
      * @param view Inflated view of the statistics page
      */
     private void initStatisticsPage(View view) {
+        // No need to load statistics list here, it will be loaded in initEssentials() function
+        if (rvStatistics != null) {
+            if (statisticsAdapter == null) {
+                statisticsAdapter = new StatisticsAdapter(statistics);
+            }
 
+            return;
+        }
+
+        rvStatistics = (RecyclerView) view.findViewById(R.id.rvStatistics);
+        rvStatistics.setLayoutManager(new LinearLayoutManager(this));
+        rvStatistics.setAdapter(statisticsAdapter = new StatisticsAdapter(statistics));
     }
 
     /**
@@ -321,6 +347,7 @@ public class MainActivity extends AppCompatActivity {
     private void initEssentials() {
         recorder = new AudioRecorder();
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        statistics = Statistic.loadStatistics(this);
 
         // Let AlarmManager get context whenever it needs
         AlarmManager.ContextGetter = new Function<Context>() {
@@ -357,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // If current dB is not enough to vibrate
                 if (db < AudioRecorder.DB_LEVEL_TO_VIBRATE) {
-                    // trySaveRecord();
+                    trySaveRecord();
 
                     if (isVibrationEnabled) {
                         isVibrating = false;
@@ -389,57 +416,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * This method will be called when the application is closed
-     */
-    @Override
-    protected void onDestroy() {
-        // Get current event handler of the application and remove the callbacks and messages
-        // (to stop vibrator)
-        new Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);
-
-        // Call default action
-        super.onDestroy();
-    }
-
-    private void requestPermission() {
-        ActivityCompat.requestPermissions(this, new String[] { WRITE_EXTERNAL_STORAGE, RECORD_AUDIO }, 1);
-    }
-
-    private boolean checkPermission() {
-        int perm1 = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE);
-        int perm2 = ContextCompat.checkSelfPermission(this, RECORD_AUDIO);
-        return perm1 == PackageManager.PERMISSION_GRANTED && perm2 == PackageManager.PERMISSION_GRANTED;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        AlarmManager.saveAlarms(this);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case 1: {
-                if (grantResults.length > 0) {
-                    boolean storagePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                    boolean recordPermission  = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-
-                    if (storagePermission && recordPermission) {
-                        Toast.makeText(this, "Permission Granted", 1).show();
-                    }
-                    else {
-                        Toast.makeText(this, "Permission should be granted", 1).show();
-                        finishAffinity();
-                    }
-                }
-
-                break;
-            }
-        }
-    }
-
     private void trySaveRecord() {
         if (recorder.getRecordingStartDate() < 0) return;
 
@@ -454,6 +430,9 @@ public class MainActivity extends AppCompatActivity {
             recordingBytes.clear();
             return;
         }
+
+        final Statistic statistic = new Statistic(startDate);
+        statistic.setTotalSecondsSnored(secondDiff);
 
         final Record record = new Record();
         record.setRecordDate(startDate);
@@ -493,10 +472,64 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 recordAdapter.addRecord(record);
+                if (statisticsAdapter == null) statistics.add(statistic);
+                else statisticsAdapter.addStatistic(statistic);
                 Toast.makeText(MainActivity.this, "Successfully written", 1).show();
             }
         });
 
         recordingBytes.clear();
+    }
+
+    /**
+     * This method will be called when the application is closed
+     */
+    @Override
+    protected void onDestroy() {
+        // Get current event handler of the application and remove the callbacks and messages
+        // (to stop vibrator)
+        new Handler(Looper.getMainLooper()).removeCallbacksAndMessages(null);
+
+        // Call default action
+        super.onDestroy();
+    }
+
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(this, new String[] { WRITE_EXTERNAL_STORAGE, RECORD_AUDIO }, 1);
+    }
+
+    private boolean checkPermission() {
+        int perm1 = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE);
+        int perm2 = ContextCompat.checkSelfPermission(this, RECORD_AUDIO);
+        return perm1 == PackageManager.PERMISSION_GRANTED && perm2 == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AlarmManager.saveAlarms(this);
+        Statistic.saveStatistics(this, statistics);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                if (grantResults.length > 0) {
+                    boolean storagePermission = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                    boolean recordPermission  = grantResults[1] == PackageManager.PERMISSION_GRANTED;
+
+                    if (storagePermission && recordPermission) {
+                        Toast.makeText(this, "Permission Granted", 1).show();
+                    }
+                    else {
+                        Toast.makeText(this, "Permission should be granted", 1).show();
+                        finishAffinity();
+                    }
+                }
+
+                break;
+            }
+        }
     }
 }

@@ -27,12 +27,12 @@ public class Timer implements Runnable {
      *
      * @return Formatted string of total seconds
      */
-    public static String prettify(int totalSeconds) {
-        int seconds = totalSeconds;
-        int minutes = totalSeconds / 60;
+    public static String prettify(long totalSeconds) {
+        long seconds = totalSeconds;
+        long minutes = totalSeconds / 60;
         seconds -= minutes * 60;
 
-        int hours = minutes / 60;
+        long hours = minutes / 60;
         minutes -= hours * 60;
 
         String strHours = "0", strMinutes = "0", strSeconds = "0";

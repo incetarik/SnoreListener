@@ -11,7 +11,7 @@ import ridvan.snorelistener.helpers.SoundLevelListener;
 public class AudioRecorder {
     public static final int    SAMPLE_RATE          = 44100;
     public static final double BASE_VALUE           = 6.8;
-    public static final double DB_LEVEL_TO_VIBRATE  = 35;
+    public static final double DB_LEVEL_TO_VIBRATE  = 15;
     public static final int    MINIMUM_AUDIO_LENGTH = 5;
     public static final int    BUFFER_SIZE          = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
