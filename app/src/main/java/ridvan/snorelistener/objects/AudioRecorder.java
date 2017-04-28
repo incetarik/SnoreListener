@@ -11,7 +11,7 @@ import ridvan.snorelistener.helpers.SoundLevelListener;
 public class AudioRecorder {
     public static final int    SAMPLE_RATE          = 44100;
     public static final double BASE_VALUE           = 6.8;
-    public static final double DB_LEVEL_TO_VIBRATE  = 15;
+    public static final double DB_LEVEL_TO_VIBRATE  = 20;
     public static final int    MINIMUM_AUDIO_LENGTH = 5;
     public static final int    BUFFER_SIZE          = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
@@ -20,8 +20,15 @@ public class AudioRecorder {
     private short[]            buffer;
     private SoundLevelListener listener;
     private AudioRecord        audioRecord;
+    private boolean            isListening;
+    private boolean            isStarted;
+    private Thread             listenerThread;
 
     public AudioRecorder() {
+        init();
+    }
+
+    private void init() {
         recordingBytes = new ArrayList<>(8192);
         buffer = new short[BUFFER_SIZE];
     }
@@ -66,14 +73,50 @@ public class AudioRecorder {
         return recordingBytes;
     }
 
+    public void stopListening() {
+        setListening(false);
+        if (audioRecord != null && isStarted()) {
+            try {
+                audioRecord.stop();
+                audioRecord.release();
+                audioRecord = null;
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        setRecordingStartDate(-1);
+        resetRecordingBytes();
+        setStarted(false);
+        init();
+
+        if (listenerThread != null) {
+            listenerThread.interrupt();
+            listenerThread = null;
+        }
+    }
+
+    public void resetRecordingBytes() {
+        recordingBytes = new ArrayList<>();
+    }
+
+    public boolean isStarted() {
+        return isStarted;
+    }
+
+    public void setStarted(boolean started) {
+        isStarted = started;
+    }
+
     public Thread startListening() {
         getOrCreateAudioRecord().startRecording();
 
-        Thread listenerThread = new Thread(new Runnable() {
+        listenerThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    while (true) {
+                    while (isListening()) {
                         // Listen the record and save into buffer array
                         audioRecord.read(buffer, 0, BUFFER_SIZE);
                         int maxValue = 0;
@@ -97,8 +140,18 @@ public class AudioRecorder {
             }
         });
 
+        setListening(true);
+        setStarted(true);
         listenerThread.start();
         return listenerThread;
+    }
+
+    public boolean isListening() {
+        return isListening;
+    }
+
+    public void setListening(boolean listening) {
+        isListening = listening;
     }
 
     private AudioRecord getOrCreateAudioRecord() {

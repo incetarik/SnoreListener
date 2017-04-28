@@ -43,7 +43,7 @@ public class Timer implements Runnable {
         else strMinutes += minutes;
 
         if (seconds >= 10) strSeconds = String.valueOf(seconds);
-        else strSeconds += strSeconds;
+        else strSeconds += seconds;
 
         return String.format("%s:%s:%s", strHours, strMinutes, strSeconds);
     }
@@ -163,5 +163,14 @@ public class Timer implements Runnable {
         isStarted = false;
         isWorking = false;
         if (handler != null) handler.purge();
+    }
+
+    public void stop(boolean resetAll) {
+        stop();
+        if (!resetAll) return;
+
+        seconds = 0;
+        minutes = 0;
+        hours = 0;
     }
 }

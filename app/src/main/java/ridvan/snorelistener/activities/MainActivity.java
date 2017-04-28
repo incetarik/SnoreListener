@@ -2,6 +2,7 @@ package ridvan.snorelistener.activities;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.database.DataSetObserver;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
@@ -36,13 +37,13 @@ import ridvan.snorelistener.R;
 import ridvan.snorelistener.helpers.Action;
 import ridvan.snorelistener.helpers.Function;
 import ridvan.snorelistener.helpers.SoundLevelListener;
-import ridvan.snorelistener.helpers.Statistic;
 import ridvan.snorelistener.helpers.Timer;
 import ridvan.snorelistener.objects.AlarmAdapter;
 import ridvan.snorelistener.objects.AlarmManager;
 import ridvan.snorelistener.objects.AudioRecorder;
 import ridvan.snorelistener.objects.Record;
 import ridvan.snorelistener.objects.RecordAdapter;
+import ridvan.snorelistener.objects.Statistic;
 import ridvan.snorelistener.objects.StatisticsAdapter;
 import ridvan.snorelistener.views.SoundMeterView;
 
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView  tvRecordDuration;
     private Switch    switchVibration;
     private TextView  tvAlarmsInfo;
+    private ViewPager viewPager;
 
     private ArrayList<Statistic> statistics;
 
@@ -63,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
     private RecordAdapter     recordAdapter;
     private StatisticsAdapter statisticsAdapter;
+    private AlarmAdapter      alarmAdapter;
 
     private Timer    timer;
     private Vibrator vibrator;
@@ -85,7 +88,10 @@ public class MainActivity extends AppCompatActivity {
         // Init essential components and variables
         initEssentials();
 
-        ((ViewPager) findViewById(R.id.viewPager)).setAdapter(new PagerAdapter() {
+
+        (viewPager = (ViewPager) findViewById(R.id.viewPager)).setAdapter(new PagerAdapter() {
+            private ArrayList<View> views = new ArrayList<>();
+
             @Override
             public int getCount() {
                 return 4;
@@ -96,43 +102,76 @@ public class MainActivity extends AppCompatActivity {
                 LayoutInflater inflater = LayoutInflater.from(getBaseContext());
                 ViewGroup      layout   = null;
 
+                //position = viewPager.getCurrentItem();
+
                 // Depending to position, inflate the related layout and invoke the related function
                 switch (position) {
                     case 0:
+                        if (views.size() > 0) {
+                            layout = (ViewGroup) views.get(0);
+                            break;
+                        }
+
                         layout = (ViewGroup) inflater.inflate(R.layout.page_main, container, false);
                         initMainPage(layout);
+                        views.add(layout);
                         break;
 
                     case 1:
+                        if (views.size() > 1) {
+                            layout = (ViewGroup) views.get(1);
+                            break;
+                        }
+
                         layout = (ViewGroup) inflater.inflate(R.layout.page_alarms, container, false);
                         initAlarmsPage(layout);
+                        views.add(layout);
                         break;
 
                     case 2:
+                        if (views.size() > 2) {
+                            layout = (ViewGroup) views.get(2);
+                            break;
+                        }
+
                         layout = (ViewGroup) inflater.inflate(R.layout.page_records, container, false);
                         initRecordsPage(layout);
+                        views.add(layout);
                         break;
 
                     case 3:
+                        if (views.size() > 3) {
+                            layout = (ViewGroup) views.get(3);
+                            break;
+                        }
+
                         layout = (ViewGroup) inflater.inflate(R.layout.page_statictics, container, false);
                         initStatisticsPage(layout);
+                        views.add(layout);
                         break;
                 }
 
                 // Add the drawn layout to current container
-                container.addView(layout);
+                viewPager.addView(layout);
 
                 return layout;
             }
 
             @Override
             public void destroyItem(ViewGroup container, int position, Object object) {
-                container.removeView((View) object);
+                viewPager.removeView((View) object); //container.removeView((View) object);
             }
 
             @Override
             public boolean isViewFromObject(View view, Object object) {
                 return view == object;
+            }
+
+            @Override
+            public void unregisterDataSetObserver(DataSetObserver observer) {
+                if (observer != null) {
+                    super.unregisterDataSetObserver(observer);
+                }
             }
 
             @Override
@@ -187,18 +226,44 @@ public class MainActivity extends AppCompatActivity {
         ivRecordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isRecording) return;
+                if (isRecording) {
+                    recorder.stopListening();
+                    Toast.makeText(MainActivity.this, "Recording stopped, statistics will be generated", 1).show();
+                    isRecording = false;
+
+                    timer.stop(true);
+                    timer = null;
+
+                    ivRecordButton.setImageDrawable(ContextCompat.getDrawable(MainActivity.this, R.drawable.mic));
+                    tvRecordDuration.setText(getString(R.string.duration_initial));
+                    return;
+                }
 
                 Toast.makeText(MainActivity.this, "Listening will start after 30 minutes", 1).show();
 
                 isRecording = true;
+                initTimer();
                 timer.run();
                 recorder.startListening();
             }
         });
 
-        // To prevent starting timer again in further re-drawing of this page, a check is needed
-        // whether timer is null
+        initTimer();
+
+        switchVibration.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isVibrationEnabled = isChecked;
+                vibrator.cancel();
+            }
+        });
+
+        // Due to the further initialization of this page, we may have switched the button before
+        // and should re-draw it
+        switchVibration.setChecked(isVibrationEnabled);
+    }
+
+    private void initTimer() {
         if (timer == null) {
             // Init and let an action that allows timer to run any runnable on ui
             timer = new Timer(new Action<Runnable>() {
@@ -230,18 +295,6 @@ public class MainActivity extends AppCompatActivity {
             // Let and allow alarm manager to use this timer
             AlarmManager.Timer = timer;
         }
-
-        switchVibration.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                isVibrationEnabled = isChecked;
-                vibrator.cancel();
-            }
-        });
-
-        // Due to the further initialization of this page, we may have switched the button before
-        // and should re-draw it
-        switchVibration.setChecked(isVibrationEnabled);
     }
 
     /**
@@ -251,8 +304,11 @@ public class MainActivity extends AppCompatActivity {
     private void initAlarmsPage(View view) {
         // If we have initialized before, return
         if (rvAlarms != null) {
-            if (rvAlarms.getAdapter() == null) {
-                rvAlarms.setAdapter(new AlarmAdapter(rvAlarms, getFragmentManager()));
+            if (alarmAdapter == null) {
+                if (rvAlarms.getAdapter() != null)
+                    alarmAdapter = (AlarmAdapter) rvAlarms.getAdapter();
+                else
+                    rvAlarms.setAdapter(alarmAdapter = new AlarmAdapter(rvAlarms, getFragmentManager()));
             }
 
             return;
@@ -274,7 +330,9 @@ public class MainActivity extends AppCompatActivity {
         // If we have initialized before, return
         if (rvRecords != null) {
             if (recordAdapter == null) {
-                recordAdapter = new RecordAdapter(rvRecords);
+                if (rvRecords.getAdapter() != null)
+                    recordAdapter = (RecordAdapter) rvRecords.getAdapter();
+                else rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords));
             }
 
             return;
@@ -326,7 +384,9 @@ public class MainActivity extends AppCompatActivity {
         // No need to load statistics list here, it will be loaded in initEssentials() function
         if (rvStatistics != null) {
             if (statisticsAdapter == null) {
-                statisticsAdapter = new StatisticsAdapter(statistics);
+                if (rvStatistics.getAdapter() != null)
+                    statisticsAdapter = (StatisticsAdapter) rvStatistics.getAdapter();
+                else rvStatistics.setAdapter(statisticsAdapter = new StatisticsAdapter(statistics));
             }
 
             return;
@@ -396,8 +456,7 @@ public class MainActivity extends AppCompatActivity {
                     recorder.setRecordingStartDate(-1);
                 }
                 else {
-                    // As shown here
-                    if (recorder.getRecordingStartDate() == -1) {
+                    if (recorder.getRecordingStartDate() < 0) {
                         recorder.setRecordingStartDate(new Date().getTime());
                     }
 
@@ -419,66 +478,88 @@ public class MainActivity extends AppCompatActivity {
     private void trySaveRecord() {
         if (recorder.getRecordingStartDate() < 0) return;
 
-        Date endDate   = new Date();
-        Date startDate = new Date(recorder.getRecordingStartDate());
-
-        long secondDiff = ((endDate.getTime() - startDate.getTime()) / 1000);
-
-        ArrayList<Byte> recordingBytes = recorder.getRecordingBytes();
+        Date                  endDate        = new Date();
+        final Date            startDate      = new Date(recorder.getRecordingStartDate());
+        final double          secondDiff     = ((endDate.getTime() - startDate.getTime()) / 1000.0);
+        final ArrayList<Byte> recordingBytes = new ArrayList<>(recorder.getRecordingBytes());
 
         if (secondDiff < AudioRecorder.MINIMUM_AUDIO_LENGTH) {
-            recordingBytes.clear();
+            recorder.resetRecordingBytes();
             return;
         }
 
-        final Statistic statistic = new Statistic(startDate);
-        statistic.setTotalSecondsSnored(secondDiff);
+        recorder.resetRecordingBytes();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final Statistic statistic = new Statistic(startDate);
+                statistic.setTotalSecondsSnored((long) secondDiff);
 
-        final Record record = new Record();
-        record.setRecordDate(startDate);
-        record.setDurationSeconds((int) secondDiff);
+                final Record record = new Record();
+                record.setRecordDate(startDate);
+                record.setDurationSeconds((int) secondDiff);
 
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(record.getFileName());
+                FileOutputStream fos = null;
+                try {
+                    fos = new FileOutputStream(record.getFileName());
 
             /*byte[] bytesToWrite = new byte[recordingBytes.size()];
             for (int i = 0; i < recordingBytes.size(); i++) {
                 bytesToWrite[i] = recordingBytes.get(i);
             }*/
 
-            for (Byte currentByte : recordingBytes) {
-                fos.write(currentByte.intValue());
-            }
+                    for (Byte currentByte : recordingBytes) {
+                        fos.write(currentByte.intValue());
+                    }
 
-            // fos.write(bytesToWrite);
-            fos.flush();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        finally {
-            try {
-                if (fos != null) {
-                    fos.close();
+                    // fos.write(bytesToWrite);
+                    fos.flush();
                 }
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
+                finally {
+                    try {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                    }
+                    catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                recordAdapter.addRecord(record);
-                if (statisticsAdapter == null) statistics.add(statistic);
-                else statisticsAdapter.addStatistic(statistic);
-                Toast.makeText(MainActivity.this, "Successfully written", 1).show();
-            }
-        });
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (recordAdapter == null) {
+                            if (rvRecords != null) {
+                                if (rvRecords.getAdapter() == null) {
+                                    rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords));
+                                }
+                                else {
+                                    recordAdapter = (RecordAdapter) rvRecords.getAdapter();
+                                }
+                            }
+                        }
+                        else {
+                            recordAdapter.addRecord(record);
+                        }
 
-        recordingBytes.clear();
+                        if (statisticsAdapter == null) {
+                            statistics.add(statistic);
+                        }
+                        else {
+                            statisticsAdapter.addStatistic(statistic);
+                        }
+
+                        Toast.makeText(MainActivity.this, "Successfully written", 1).show();
+                    }
+                });
+
+                recordingBytes.clear();
+            }
+        }).start();
     }
 
     /**

@@ -12,7 +12,6 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Statistic;
 import ridvan.snorelistener.helpers.Timer;
 
 /**
@@ -41,12 +40,19 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
         for (Statistic statistic : statistics) {
             statistic.setPercentage(statistic.getTotalSecondsSnored() * 100.0 / maximumValue);
         }
+
+        notifyDataSetChanged();
     }
 
     public StatisticsAdapter addStatistic(Statistic statistic) {
         statistics.add(statistic);
 
+        if (maximumValue < statistic.getTotalSecondsSnored()) {
+            maximumValue = statistic.getTotalSecondsSnored();
+        }
+
         notifyItemInserted(statistics.size());
+        notifyDataSetChanged();
 
         return this;
     }
@@ -69,7 +75,8 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
     @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(final StatisticsViewHolder holder, final int position) {
-        final int adapterPos = holder.getAdapterPosition();
+        final int       adapterPos = holder.getAdapterPosition();
+        final Statistic statistic  = statistics.get(adapterPos);
 
         holder.ivDelete.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,10 +84,14 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
                 if (adapterPos < 0 || adapterPos >= statistics.size()) return;
                 statistics.remove(adapterPos);
                 notifyItemRemoved(adapterPos);
+
+                if (statistic.getTotalSecondsSnored() == maximumValue) {
+                    maximumValue = getMaximumValue();
+                }
+
+                notifyDataSetChanged();
             }
         });
-
-        Statistic statistic = statistics.get(adapterPos);
 
         String[] totalTime = Timer.prettify(statistic.getTotalSecondsSnored()).split(":");
         int      hours     = Integer.parseInt(totalTime[0]);
@@ -90,8 +101,22 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
         else if (minutes > 0) holder.tvTotalDuration.setText(totalTime[1] + "m");
         else holder.tvTotalDuration.setText(totalTime[2] + "s");
 
+        holder.tvStartDate.setText(statistic.getDateTime().toString());
+
         holder.progressPercentage.setMax((int) maximumValue);
         holder.progressPercentage.setProgress((int) statistic.getTotalSecondsSnored());
+    }
+
+    private long getMaximumValue() {
+        long max = -1;
+        for (Statistic statistic : statistics) {
+            long totalSeconds = statistic.getTotalSecondsSnored();
+            if (totalSeconds > max) {
+                max = totalSeconds;
+            }
+        }
+
+        return max;
     }
 
     @Override
@@ -101,6 +126,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
 
     class StatisticsViewHolder extends RecyclerView.ViewHolder {
         TextView    tvTotalDuration;
+        TextView    tvStartDate;
         ProgressBar progressPercentage;
         ImageView   ivDelete;
 
@@ -110,6 +136,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
             tvTotalDuration = (TextView) itemView.findViewById(R.id.tvTotalDuration);
             progressPercentage = (ProgressBar) itemView.findViewById(R.id.progressPercentage);
             ivDelete = (ImageView) itemView.findViewById(R.id.ivDelete);
+            tvStartDate = (TextView) itemView.findViewById(R.id.tvStartDate);
         }
     }
 }
