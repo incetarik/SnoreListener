@@ -44,11 +44,21 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
         android:text="TextView"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="@+id/progressPercentage"
-        app:layout_constraintRight_toRightOf="@+id/progressPercentage"
+        app:layout_constraintRight_toLeftOf="@+id/tvPercentage"
         app:layout_constraintTop_toBottomOf="@+id/progressPercentage"
         app:layout_constraintVertical_bias="0.45"/>
+
+    <TextView
+        android:id="@+id/tvPercentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        android:textSize="12sp"
+        app:layout_constraintRight_toRightOf="@+id/progressPercentage"
+        app:layout_constraintTop_toBottomOf="@+id/progressPercentage"/>
 </android.support.constraint.ConstraintLayout>

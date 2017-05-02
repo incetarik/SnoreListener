@@ -14,12 +14,6 @@ import java.util.ArrayList;
 import ridvan.snorelistener.R;
 import ridvan.snorelistener.helpers.Timer;
 
-/**
- * Project: SnoreListener
- * <p>
- * Date: 26 Apr 2017
- * Author: Tarık İNCE <incetarik@hotmail.com>
- */
 public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.StatisticsViewHolder> {
     private ArrayList<Statistic> statistics;
     private long                 maximumValue;
@@ -105,6 +99,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
 
         holder.progressPercentage.setMax((int) maximumValue);
         holder.progressPercentage.setProgress((int) statistic.getTotalSecondsSnored());
+        holder.tvPercentage.setText(String.valueOf(statistic.getTotalSecondsSnored() * 100.0 / maximumValue) + "%");
     }
 
     private long getMaximumValue() {
@@ -127,6 +122,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
     class StatisticsViewHolder extends RecyclerView.ViewHolder {
         TextView    tvTotalDuration;
         TextView    tvStartDate;
+        TextView    tvPercentage;
         ProgressBar progressPercentage;
         ImageView   ivDelete;
 
@@ -137,6 +133,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
             progressPercentage = (ProgressBar) itemView.findViewById(R.id.progressPercentage);
             ivDelete = (ImageView) itemView.findViewById(R.id.ivDelete);
             tvStartDate = (TextView) itemView.findViewById(R.id.tvStartDate);
+            tvPercentage = (TextView) itemView.findViewById(R.id.tvPercentage);
         }
     }
 }

@@ -33,13 +33,23 @@ public class AudioRecorder {
         buffer = new short[BUFFER_SIZE];
     }
 
-    public static byte[] short2byte(short[] sData) {
-        int    shortArrSize = sData.length;
+    /**
+     * Short array to byte array converter.
+     * <p>
+     * This code is taken from internet. Such converters could be found anywhere
+     * and this converting is required for audio recorder.
+     *
+     * @param array Short array
+     *
+     * @return Byte array of given short array
+     */
+    public static byte[] short2byte(short[] array) {
+        int    shortArrSize = array.length;
         byte[] bytes        = new byte[shortArrSize * 2];
         for (int i = 0; i < shortArrSize; i++) {
-            bytes[i * 2] = (byte) (sData[i] & 0x00FF);
-            bytes[(i * 2) + 1] = (byte) (sData[i] >> 8);
-            sData[i] = 0;
+            bytes[i * 2] = (byte) (array[i] & 0x00FF);
+            bytes[(i * 2) + 1] = (byte) (array[i] >> 8);
+            array[i] = 0;
         }
         return bytes;
 

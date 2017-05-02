@@ -102,9 +102,12 @@ public class MainActivity extends AppCompatActivity {
                 LayoutInflater inflater = LayoutInflater.from(getBaseContext());
                 ViewGroup      layout   = null;
 
-                //position = viewPager.getCurrentItem();
-
                 // Depending to position, inflate the related layout and invoke the related function
+
+                // NOTE: If a layout is being created first time, it will be added to views list.
+                // For next usages of the views, views list will be used to prevent reinitialization
+                // problems for some devices.
+
                 switch (position) {
                     case 0:
                         if (views.size() > 0) {
@@ -159,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void destroyItem(ViewGroup container, int position, Object object) {
-                viewPager.removeView((View) object); //container.removeView((View) object);
+                viewPager.removeView((View) object);
             }
 
             @Override
