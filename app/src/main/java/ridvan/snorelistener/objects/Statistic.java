@@ -17,9 +17,11 @@ import java.util.Date;
 
 public class Statistic implements Serializable {
     private static final String STATISTICS_FILE = "Statistics";
-    private Date   dateTime;
-    private long   totalSecondsSnored;
+
     private double percentage;
+    private long   totalSecondsSnored;
+
+    private Date dateTime;
 
     public Statistic() {
     }

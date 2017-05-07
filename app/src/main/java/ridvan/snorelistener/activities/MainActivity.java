@@ -51,31 +51,32 @@ import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 public class MainActivity extends AppCompatActivity {
-    private ImageView ivRecordButton;
-    private TextView  tvRecordDuration;
-    private Switch    switchVibration;
-    private TextView  tvAlarmsInfo;
+    private boolean isVibrating;
+    private boolean isRecording;
+    private boolean isAudioPlaying;
+    private boolean isVibrationEnabled;
+
     private ViewPager viewPager;
+    private TextView  tvAlarmsInfo;
+    private ImageView ivRecordButton;
+    private Switch    switchVibration;
+    private TextView  tvRecordDuration;
 
-    private ArrayList<Statistic> statistics;
-
-    private RecyclerView rvRecords;
     private RecyclerView rvAlarms;
+    private RecyclerView rvRecords;
     private RecyclerView rvStatistics;
 
+    private AlarmAdapter      alarmAdapter;
     private RecordAdapter     recordAdapter;
     private StatisticsAdapter statisticsAdapter;
-    private AlarmAdapter      alarmAdapter;
 
     private Timer    timer;
     private Vibrator vibrator;
 
-    private boolean isVibrating;
-    private boolean isVibrationEnabled;
-    private boolean isRecording;
-
-    private SoundMeterView soundMeter;
     private AudioRecorder  recorder;
+    private SoundMeterView soundMeter;
+
+    private ArrayList<Statistic> statistics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +88,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Init essential components and variables
         initEssentials();
-
 
         (viewPager = (ViewPager) findViewById(R.id.viewPager)).setAdapter(new PagerAdapter() {
             private ArrayList<View> views = new ArrayList<>();
@@ -231,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (isRecording) {
                     recorder.stopListening();
+                    trySaveRecord();
                     Toast.makeText(MainActivity.this, "Recording stopped, statistics will be generated", 1).show();
                     isRecording = false;
 
@@ -242,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
+                // TODO: Implement this
                 Toast.makeText(MainActivity.this, "Listening will start after 30 minutes", 1).show();
 
                 isRecording = true;
@@ -302,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Initializes the alarm page
+     *
      * @param view Inflated view of the alarm page
      */
     private void initAlarmsPage(View view) {
@@ -327,15 +330,24 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Initializes the records page
+     *
      * @param view Inflated view of the records page
      */
     private void initRecordsPage(View view) {
+        Action<Boolean> onAudioStateChanged = new Action<Boolean>() {
+            @Override
+            public void call(Boolean obj) {
+                isAudioPlaying = obj;
+            }
+        };
+
         // If we have initialized before, return
         if (rvRecords != null) {
             if (recordAdapter == null) {
                 if (rvRecords.getAdapter() != null)
                     recordAdapter = (RecordAdapter) rvRecords.getAdapter();
-                else rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords));
+                else
+                    rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords, onAudioStateChanged));
             }
 
             return;
@@ -343,7 +355,7 @@ public class MainActivity extends AppCompatActivity {
 
         rvRecords = (RecyclerView) view.findViewById(R.id.rvRecords);
         rvRecords.setLayoutManager(new LinearLayoutManager(this));
-        rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords));
+        rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords, onAudioStateChanged));
 
         addPreSavedFiles();
     }
@@ -371,8 +383,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // Create Record and its information here
-            Date recordDate   = new Date(Long.parseLong(info[1]));
-            int  recordLength = Integer.parseInt(info[2].substring(0, info[2].indexOf('.')));
+            Date   recordDate   = new Date(Long.parseLong(info[1]));
+            double recordLength = Double.parseDouble(info[2].substring(0, info[2].lastIndexOf('.')));
 
             Record record = new Record(filePath, recordDate, recordLength);
             recordAdapter.addRecord(record);
@@ -381,6 +393,7 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Initializes the statistics page
+     *
      * @param view Inflated view of the statistics page
      */
     private void initStatisticsPage(View view) {
@@ -433,9 +446,25 @@ public class MainActivity extends AppCompatActivity {
 
         // Sound level listener
         recorder.setListener(new SoundLevelListener() {
+            private int remainingStepCount = 0;
+
             @Override
             public void onMeasure(final double db) {
                 Log.d("dB", String.valueOf(db));
+
+                // While audio is playing, wait until it ends, and do not listen sound
+                if (isAudioPlaying) {
+                    if (!soundMeter.clearDraw()) return;
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "Cannot listen while audio is playing!", 1).show();
+                        }
+                    });
+
+                    return;
+                }
 
                 // Send dB information to the soundMeter view
                 soundMeter.post(new Runnable() {
@@ -446,7 +475,7 @@ public class MainActivity extends AppCompatActivity {
                 });
 
                 // If current dB is not enough to vibrate
-                if (db < AudioRecorder.DB_LEVEL_TO_VIBRATE) {
+                if (db < AudioRecorder.DB_LEVEL_TO_VIBRATE && --remainingStepCount < 0) {
                     trySaveRecord();
 
                     if (isVibrationEnabled) {
@@ -469,11 +498,18 @@ public class MainActivity extends AppCompatActivity {
                         recorder.getRecordingBytes().add(currentByte);
                     }
 
+                    refreshRemainingSteps();
+
                     if (!isVibrationEnabled || isVibrating) return;
 
                     vibrator.vibrate(new long[] { 0, 100, 0 }, 0);
                     isVibrating = true;
                 }
+            }
+
+            private void refreshRemainingSteps() {
+                int secondsAllowedAsLow = 5;
+                remainingStepCount = (secondsAllowedAsLow * 1000 / recorder.getLatencyMillis());
             }
         });
     }
@@ -500,22 +536,16 @@ public class MainActivity extends AppCompatActivity {
 
                 final Record record = new Record();
                 record.setRecordDate(startDate);
-                record.setDurationSeconds((int) secondDiff);
+                record.setDurationSeconds(secondDiff);
 
                 FileOutputStream fos = null;
                 try {
                     fos = new FileOutputStream(record.getFileName());
 
-            /*byte[] bytesToWrite = new byte[recordingBytes.size()];
-            for (int i = 0; i < recordingBytes.size(); i++) {
-                bytesToWrite[i] = recordingBytes.get(i);
-            }*/
-
                     for (Byte currentByte : recordingBytes) {
                         fos.write(currentByte.intValue());
                     }
 
-                    // fos.write(bytesToWrite);
                     fos.flush();
                 }
                 catch (IOException e) {
@@ -538,7 +568,12 @@ public class MainActivity extends AppCompatActivity {
                         if (recordAdapter == null) {
                             if (rvRecords != null) {
                                 if (rvRecords.getAdapter() == null) {
-                                    rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords));
+                                    rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords, new Action<Boolean>() {
+                                        @Override
+                                        public void call(Boolean obj) {
+                                            isAudioPlaying = obj;
+                                        }
+                                    }));
                                 }
                                 else {
                                     recordAdapter = (RecordAdapter) rvRecords.getAdapter();

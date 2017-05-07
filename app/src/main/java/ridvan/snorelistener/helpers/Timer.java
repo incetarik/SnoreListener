@@ -4,16 +4,17 @@ import java.util.ArrayList;
 import java.util.TimerTask;
 
 public class Timer implements Runnable {
-    private          int                 seconds;
-    private          int                 minutes;
-    private          int                 hours;
-    private          long                delay;
-    private volatile boolean             isWorking;
-    private          boolean             isStarted;
-    private          java.util.Timer     handler;
-    private          ArrayList<Runnable> onTickEvents;
-    private          Action<Runnable>    onUiThread;
-    private          StringBuilder       sb;
+    private          long    delay;
+    private          int     hours;
+    private          int     seconds;
+    private          int     minutes;
+    private volatile boolean isWorking;
+    private          boolean isStarted;
+
+    private StringBuilder       sb;
+    private java.util.Timer     handler;
+    private Action<Runnable>    onUiThread;
+    private ArrayList<Runnable> onTickEvents;
 
     public Timer(Action<Runnable> onUiThread) {
         this.onUiThread = onUiThread;

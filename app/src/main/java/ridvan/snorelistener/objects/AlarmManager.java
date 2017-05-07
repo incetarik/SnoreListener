@@ -25,9 +25,9 @@ public class AlarmManager {
     private static final ArrayList<Alarm>                   ALARMS      = new ArrayList<>();
     public static        ridvan.snorelistener.helpers.Timer Timer       = null;
     public static  Function<Context> ContextGetter;
-    private static Runnable          onAlarmAddedListener;
-    private static boolean           timerInitialized;
     private static Ringtone          currentRingtone;
+    private static boolean           timerInitialized;
+    private static Runnable          onAlarmAddedListener;
 
     public static int getAlarmCount() {
         return ALARMS.size();
@@ -51,7 +51,10 @@ public class AlarmManager {
                 public void run() {
                     if (nextAlarm == null) {
                         nextAlarm = getNextAlarm();
-                        remainingSeconds = (new Date().getTime() - nextAlarm.getDate().getTime()) / 1000;
+
+                        if (nextAlarm != null) {
+                            remainingSeconds = (new Date().getTime() - nextAlarm.getDate().getTime()) / 1000;
+                        }
                     }
                     else if (--remainingSeconds <= 0) {
                         startAlarm(nextAlarm);
@@ -159,7 +162,7 @@ public class AlarmManager {
             br.close();
         }
         catch (IOException e) {
-            e.printStackTrace();
+            // ignored
         }
         finally {
             try {

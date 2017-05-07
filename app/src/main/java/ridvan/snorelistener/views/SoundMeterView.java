@@ -13,12 +13,13 @@ import java.util.LinkedList;
  * SoundMeterView, is just a normal empty view with circles of sound levels, handled by functions
  */
 public class SoundMeterView extends View {
-    private int                 minLevel;
-    private int                 currentLevel;
+    private int oldLevel;
+    private int minLevel;
+    private int currentLevel;
+    private int visibleLevelCount = 5;
+
     private Paint               paint;
     private LinkedList<Integer> radiuses;
-    private int visibleLevelCount = 5;
-    private int oldLevel;
 
     public SoundMeterView(Context context) {
         super(context);
@@ -71,6 +72,14 @@ public class SoundMeterView extends View {
 
         // Force redraw this view
         invalidate();
+    }
+
+    public boolean clearDraw() {
+        if (radiuses.isEmpty()) return false;
+
+        radiuses.clear();
+        invalidate();
+        return true;
     }
 
     @Override

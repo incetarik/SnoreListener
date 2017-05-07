@@ -15,8 +15,9 @@ import ridvan.snorelistener.R;
 import ridvan.snorelistener.helpers.Timer;
 
 public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.StatisticsViewHolder> {
-    private ArrayList<Statistic> statistics;
     private long                 maximumValue;
+
+    private ArrayList<Statistic> statistics;
 
     public StatisticsAdapter() {
         statistics = new ArrayList<>();
@@ -120,20 +121,20 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
     }
 
     class StatisticsViewHolder extends RecyclerView.ViewHolder {
-        TextView    tvTotalDuration;
+        ImageView   ivDelete;
         TextView    tvStartDate;
         TextView    tvPercentage;
+        TextView    tvTotalDuration;
         ProgressBar progressPercentage;
-        ImageView   ivDelete;
 
         public StatisticsViewHolder(View itemView) {
             super(itemView);
 
-            tvTotalDuration = (TextView) itemView.findViewById(R.id.tvTotalDuration);
-            progressPercentage = (ProgressBar) itemView.findViewById(R.id.progressPercentage);
             ivDelete = (ImageView) itemView.findViewById(R.id.ivDelete);
             tvStartDate = (TextView) itemView.findViewById(R.id.tvStartDate);
             tvPercentage = (TextView) itemView.findViewById(R.id.tvPercentage);
+            tvTotalDuration = (TextView) itemView.findViewById(R.id.tvTotalDuration);
+            progressPercentage = (ProgressBar) itemView.findViewById(R.id.progressPercentage);
         }
     }
 }

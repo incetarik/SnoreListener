@@ -15,14 +15,16 @@ public class AudioRecorder {
     public static final int    MINIMUM_AUDIO_LENGTH = 5;
     public static final int    BUFFER_SIZE          = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
-    private ArrayList<Byte> recordingBytes;
+    private short[] buffer;
+    private boolean isStarted;
+    private boolean isListening;
+    private int     latencyMillis;
     private long recordingStartDate = -1;
-    private short[]            buffer;
+
     private SoundLevelListener listener;
     private AudioRecord        audioRecord;
-    private boolean            isListening;
-    private boolean            isStarted;
     private Thread             listenerThread;
+    private ArrayList<Byte>    recordingBytes;
 
     public AudioRecorder() {
         init();
@@ -31,6 +33,7 @@ public class AudioRecorder {
     private void init() {
         recordingBytes = new ArrayList<>(8192);
         buffer = new short[BUFFER_SIZE];
+        setLatencyMillis(20);
     }
 
     /**
@@ -141,7 +144,7 @@ public class AudioRecorder {
                         listener.onMeasure(dB);
 
                         // Sleep for next loop
-                        Thread.sleep(80);
+                        Thread.sleep(getLatencyMillis());
                     }
                 }
                 catch (InterruptedException e) {
@@ -154,6 +157,14 @@ public class AudioRecorder {
         setStarted(true);
         listenerThread.start();
         return listenerThread;
+    }
+
+    public int getLatencyMillis() {
+        return latencyMillis;
+    }
+
+    public void setLatencyMillis(int latencyMillis) {
+        this.latencyMillis = latencyMillis;
     }
 
     public boolean isListening() {

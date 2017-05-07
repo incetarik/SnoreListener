@@ -32,12 +32,6 @@ import java.util.Map;
 
 import ridvan.snorelistener.R;
 
-/**
- * Project: SnoreListener
- * <p>
- * Date: 24 Apr 2017
- * Author: Tarık İNCE <incetarik@hotmail.com>
- */
 public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder> {
     private RecyclerView    rvAlarms;
     private FragmentManager fragmentManager;
@@ -237,10 +231,10 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
     }
 
     class AlarmViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivAlarm;
-        ImageView ivDelete;
         TextView  tvDate;
+        ImageView ivAlarm;
         TextView  tvTitle;
+        ImageView ivDelete;
         TextView  tvAddAlarm;
 
         public AlarmViewHolder(View itemView, boolean first) {
@@ -251,10 +245,10 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
                 return;
             }
 
-            ivAlarm = (ImageView) itemView.findViewById(R.id.ivAlarm);
-            ivDelete = (ImageView) itemView.findViewById(R.id.ivDelete);
             tvDate = (TextView) itemView.findViewById(R.id.tvDate);
+            ivAlarm = (ImageView) itemView.findViewById(R.id.ivAlarm);
             tvTitle = (TextView) itemView.findViewById(R.id.tvTitle);
+            ivDelete = (ImageView) itemView.findViewById(R.id.ivDelete);
         }
     }
 }

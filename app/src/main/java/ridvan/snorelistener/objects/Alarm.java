@@ -6,11 +6,12 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class Alarm implements Serializable {
-    private Date    date;
-    private String  title;
     private boolean isEnabled;
     private boolean repeatedWeekly;
     private boolean isVibrationEnabled;
+
+    private Date    date;
+    private String  title;
     private Uri     ringtoneUri;
 
     public Alarm(Date date, String title, boolean isEnabled, boolean repeatedWeekly, boolean isVibrationEnabled, Uri ringtoneUri) {
