@@ -5,4 +5,6 @@
     <color name="colorAccent">#FF4081</color>
     <color name="md_black_1000">#333</color>
     <color name="gray">#eee</color>
+
+    <color name="black_overlay">#66000000</color>
 </resources>

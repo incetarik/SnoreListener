@@ -9,4 +9,9 @@
     <string name="date">Date</string>
     <string name="enable_or_disable_the_alarm">Enable or disable the alarm</string>
     <string name="add_an_alarm">Add an Alarm</string>
+    <string name="splash_1">Close windows and doors for less ambient noise</string>
+    <string name="splash_2">Place your device close to your pillow</string>
+    <string name="splash_3">Please keep the device connected to the power source</string>
+    <string name="click_to_continue">Click to continue</string>
+    <string name="visit_us">Visit Us</string>
 </resources>
