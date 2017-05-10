@@ -1,5 +1,6 @@
 package ridvan.snorelistener.activities;
 
+import android.animation.Animator;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
@@ -26,6 +27,8 @@ import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.mariux.teleport.lib.TeleportClient;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -55,11 +58,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRecording;
     private boolean isAudioPlaying;
     private boolean isVibrationEnabled;
+    private boolean isWearVibrationEnabled;
 
     private ViewPager viewPager;
     private TextView  tvAlarmsInfo;
     private ImageView ivRecordButton;
     private Switch    switchVibration;
+    private Switch    switchVibrationForWear;
     private TextView  tvRecordDuration;
 
     private RecyclerView rvAlarms;
@@ -77,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
     private SoundMeterView soundMeter;
 
     private ArrayList<Statistic> statistics;
+    private TeleportClient       teleportClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -205,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
         tvRecordDuration = (TextView) view.findViewById(R.id.tvRecordDuration);
         soundMeter = (SoundMeterView) view.findViewById(R.id.soundMeter);
         switchVibration = (Switch) view.findViewById(R.id.switchVibration);
+        switchVibrationForWear = (Switch) view.findViewById(R.id.switchWearVibration);
         tvAlarmsInfo = (TextView) view.findViewById(R.id.tvAlarmsInfo);
 
         ivRecordButton.post(new Runnable() {
@@ -254,6 +261,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         initTimer();
+        final int duration = 200;
 
         switchVibration.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -263,8 +271,73 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        switchVibrationForWear.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isWearVibrationEnabled = isChecked;
+
+                if (isChecked) {
+                    buttonView.animate().translationY(-buttonView.getHeight()).setDuration(duration).start();
+                    switchVibration.animate().alpha(1f).translationY(-buttonView.getHeight()).setListener(new Animator.AnimatorListener() {
+                        @Override
+                        public void onAnimationStart(Animator animation) {
+                            switchVibration.setVisibility(View.VISIBLE);
+                            switchVibration.setAlpha(0f);
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                        }
+
+                        @Override
+                        public void onAnimationCancel(Animator animation) {
+                        }
+
+                        @Override
+                        public void onAnimationRepeat(Animator animation) {
+                        }
+                    }).setDuration(duration).start();
+                }
+                else {
+                    buttonView.animate().translationY(0).setDuration(duration).start();
+                    switchVibration.animate().alpha(0f).translationY(0).setListener(new Animator.AnimatorListener() {
+                        @Override
+                        public void onAnimationStart(Animator animation) {
+                            switchVibration.setVisibility(View.VISIBLE);
+                            switchVibration.setAlpha(1f);
+                        }
+
+                        @Override
+                        public void onAnimationEnd(Animator animation) {
+                            switchVibration.setVisibility(View.GONE);
+                        }
+
+                        @Override
+                        public void onAnimationCancel(Animator animation) {
+
+                        }
+
+                        @Override
+                        public void onAnimationRepeat(Animator animation) {
+
+                        }
+                    }).setDuration(duration).start();
+                }
+            }
+        });
+
+        switchVibration.setVisibility(View.GONE);
+
+        switchVibration.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isWearVibrationEnabled = isChecked;
+            }
+        });
+
         // Due to the further initialization of this page, we may have switched the button before
         // and should re-draw it
+        switchVibrationForWear.setChecked(isWearVibrationEnabled);
         switchVibration.setChecked(isVibrationEnabled);
     }
 
@@ -421,6 +494,8 @@ public class MainActivity extends AppCompatActivity {
      * - Sound Level Listener
      */
     private void initEssentials() {
+        teleportClient = new TeleportClient(this);
+
         recorder = new AudioRecorder();
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         statistics = Statistic.loadStatistics(this);
@@ -460,6 +535,7 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             Toast.makeText(MainActivity.this, "Cannot listen while audio is playing!", 1).show();
+                            syncVibration(false);
                         }
                     });
 
@@ -483,6 +559,10 @@ public class MainActivity extends AppCompatActivity {
                         vibrator.cancel();
                     }
 
+                    if (isWearVibrationEnabled) {
+                        syncVibration(false);
+                    }
+
                     // -1 is an indicator that when it is, recorder will set 'NOW' as currently
                     // recording Record object start date
                     recorder.setRecordingStartDate(-1);
@@ -500,6 +580,7 @@ public class MainActivity extends AppCompatActivity {
 
                     refreshRemainingSteps();
 
+                    if (isWearVibrationEnabled) syncVibration(true);
                     if (!isVibrationEnabled || isVibrating) return;
 
                     vibrator.vibrate(new long[] { 0, 100, 0 }, 0);
@@ -514,6 +595,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Tries saving current record if it is possible, by these conditions:
+     * 1) Recorder should be started recording and should set recordingStartDate
+     * 2) Recorded length in seconds should be greater than (or equal to) {@link
+     * AudioRecorder#MINIMUM_AUDIO_LENGTH}
+     */
     private void trySaveRecord() {
         if (recorder.getRecordingStartDate() < 0) return;
 
@@ -600,6 +687,33 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void syncVibration(boolean vibrationState) {
+        if (!isWearVibrationEnabled) return;
+        teleportClient.syncBoolean(Context.VIBRATOR_SERVICE, vibrationState);
+    }
+
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(this, new String[] { WRITE_EXTERNAL_STORAGE, RECORD_AUDIO }, 1);
+    }
+
+    private boolean checkPermission() {
+        int perm1 = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE);
+        int perm2 = ContextCompat.checkSelfPermission(this, RECORD_AUDIO);
+        return perm1 == PackageManager.PERMISSION_GRANTED && perm2 == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        teleportClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        teleportClient.disconnect();
+    }
+
     /**
      * This method will be called when the application is closed
      */
@@ -611,16 +725,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Call default action
         super.onDestroy();
-    }
-
-    private void requestPermission() {
-        ActivityCompat.requestPermissions(this, new String[] { WRITE_EXTERNAL_STORAGE, RECORD_AUDIO }, 1);
-    }
-
-    private boolean checkPermission() {
-        int perm1 = ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE);
-        int perm2 = ContextCompat.checkSelfPermission(this, RECORD_AUDIO);
-        return perm1 == PackageManager.PERMISSION_GRANTED && perm2 == PackageManager.PERMISSION_GRANTED;
     }
 
     @Override

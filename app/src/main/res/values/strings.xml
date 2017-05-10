@@ -14,4 +14,5 @@
     <string name="splash_3">Please keep the device connected to the power source</string>
     <string name="click_to_continue">Click to continue</string>
     <string name="visit_us">Visit Us</string>
+    <string name="vibration_for_wear">Vibration for Wear</string>
 </resources>
