@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
 import android.graphics.drawable.Drawable;
+import android.media.Ringtone;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -41,6 +42,7 @@ import ridvan.snorelistener.helpers.Action;
 import ridvan.snorelistener.helpers.Function;
 import ridvan.snorelistener.helpers.SoundLevelListener;
 import ridvan.snorelistener.helpers.Timer;
+import ridvan.snorelistener.objects.Alarm;
 import ridvan.snorelistener.objects.AlarmAdapter;
 import ridvan.snorelistener.objects.AlarmManager;
 import ridvan.snorelistener.objects.AudioRecorder;
@@ -331,7 +333,12 @@ public class MainActivity extends AppCompatActivity {
         switchVibration.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                isWearVibrationEnabled = isChecked;
+                isVibrationEnabled = isChecked;
+
+                if (!isChecked && isVibrating) {
+                    vibrator.cancel();
+                    isVibrating = false;
+                }
             }
         });
 
@@ -369,9 +376,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             });
-
-            // Let and allow alarm manager to use this timer
-            AlarmManager.Timer = timer;
         }
     }
 
@@ -484,6 +488,70 @@ public class MainActivity extends AppCompatActivity {
         rvStatistics = (RecyclerView) view.findViewById(R.id.rvStatistics);
         rvStatistics.setLayoutManager(new LinearLayoutManager(this));
         rvStatistics.setAdapter(statisticsAdapter = new StatisticsAdapter(statistics));
+
+        mergeStatistics();
+    }
+
+    /**
+     * Creates or binds/merges statistics by comparing not registered statistics and pre-saved
+     * but corrupted statistics (in case it may happen due to the manual editing)
+     * <p>
+     * Do not call this method manually, it should be called last in {@link
+     * MainActivity#initStatisticsPage(View)}
+     */
+    private void mergeStatistics() {
+        ArrayList<Statistic> statistics = new ArrayList<>(Statistic.getStatistics());
+        ArrayList<Record>    records    = new ArrayList<>(recordAdapter.getRecords());
+
+        double totalDuration = 0;
+
+        // For each record
+        for (int i = records.size() - 1; i >= 0; i--) {
+            Record  record  = records.get(i);
+            boolean matched = false;
+
+            totalDuration += record.getDurationSeconds();
+
+            // For each statistic
+            for (int j = statistics.size() - 1; j >= 0; j--) {
+                Statistic statistic = statistics.get(j);
+
+                // If this statistic has a relation with current record, mark as matched
+                // and remove this statistic since we are not going to re-use it in next loops
+                if (statistic.getRecordId() == record.getRecordDate().getTime()) {
+                    matched = true;
+                    statistics.remove(j);
+                    break;
+                }
+            }
+
+            // If any statistic is matched/found related with current record, then remove
+            // current record from records list to not to use it again in next loops
+            if (matched) records.remove(i);
+        }
+
+        // After here, any record we have, means we have records whose statistic information
+        // is not found, and should be re-generated.
+        //
+        // And any statistic we found here, is not representing any record currently known and
+        // should be removed.
+
+        // For the statistics not matched, remove them
+        ArrayList<Statistic> originalStatisticList = Statistic.getStatistics();
+        originalStatisticList.removeAll(statistics);
+
+        // For the remaining records, generate statistics
+        for (Record record : records) {
+            double rate = record.getDurationSeconds() * 100 / totalDuration;
+            Statistic statistic = new Statistic(
+                    record.getRecordDate().getTime(),
+                    record.getRecordDate(),
+                    (long) record.getDurationSeconds(),
+                    rate
+            );
+
+            statisticsAdapter.addStatistic(statistic);
+        }
     }
 
     /**
@@ -509,24 +577,35 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Create binding for alarms that, when added or removed, update tvAlarmsInfo view
-        AlarmManager.setOnAlarmAddedListener(new Runnable() {
+        AlarmManager.registerListener(new Action<Alarm>() {
             @Override
-            public void run() {
-                tvAlarmsInfo.setText(String.format(getString(R.string.alarms_count), AlarmManager.getAlarmCount()));
+            public void call(Alarm obj) {
+                tvAlarmsInfo.setText(
+                        String.format(getString(R.string.alarms_count), AlarmManager.getAlarmCount())
+                );
+            }
+        }, AlarmManager.AlarmEvent.ADDED);
+
+        // Let and allow alarm manager to use this timer
+        AlarmManager.Timer = new Timer(new Action<Runnable>() {
+            @Override
+            public void call(Runnable obj) {
+                MainActivity.this.runOnUiThread(obj);
             }
         });
 
         // Let AlarmManager load previously saved alarms
         AlarmManager.loadSavedAlarms(this);
+        AlarmManager.updateAlarmDates();
+        AlarmManager.initTimer();
 
         // Sound level listener
         recorder.setListener(new SoundLevelListener() {
             private int remainingStepCount = 0;
+            private boolean recordingStarted = false;
 
             @Override
             public void onMeasure(final double db) {
-                Log.d("dB", String.valueOf(db));
-
                 // While audio is playing, wait until it ends, and do not listen sound
                 if (isAudioPlaying) {
                     if (!soundMeter.clearDraw()) return;
@@ -551,17 +630,20 @@ public class MainActivity extends AppCompatActivity {
                 });
 
                 // If current dB is not enough to vibrate
-                if (db < AudioRecorder.DB_LEVEL_TO_VIBRATE && --remainingStepCount < 0) {
+                if (!recordingStarted && db < AudioRecorder.DB_LEVEL_TO_VIBRATE) {
+                    Log.d("Listener", "Recording is not started and db is small: " + db);
+                    return;
+                }
+
+                Log.d("Listener", String.format("Recording Started: %b, Remaining Step: %d, db: %.2f", recordingStarted, remainingStepCount, db));
+                if (recordingStarted && db < AudioRecorder.DB_LEVEL_TO_VIBRATE) {
+                    if (--remainingStepCount > 0) return;
+
                     trySaveRecord();
+                    recordingStarted = false;
 
-                    if (isVibrationEnabled) {
-                        isVibrating = false;
-                        vibrator.cancel();
-                    }
-
-                    if (isWearVibrationEnabled) {
-                        syncVibration(false);
-                    }
+                    if (isVibrationEnabled) setVibrating(false);
+                    if (isWearVibrationEnabled) syncVibration(false);
 
                     // -1 is an indicator that when it is, recorder will set 'NOW' as currently
                     // recording Record object start date
@@ -570,6 +652,7 @@ public class MainActivity extends AppCompatActivity {
                 else {
                     if (recorder.getRecordingStartDate() < 0) {
                         recorder.setRecordingStartDate(new Date().getTime());
+                        recordingStarted = true;
                     }
 
                     // For each collected (short type as) bytes
@@ -583,16 +666,23 @@ public class MainActivity extends AppCompatActivity {
                     if (isWearVibrationEnabled) syncVibration(true);
                     if (!isVibrationEnabled || isVibrating) return;
 
-                    vibrator.vibrate(new long[] { 0, 100, 0 }, 0);
-                    isVibrating = true;
+                    setVibrating(true);
                 }
             }
 
             private void refreshRemainingSteps() {
-                int secondsAllowedAsLow = 5;
-                remainingStepCount = (secondsAllowedAsLow * 1000 / recorder.getLatencyMillis());
+                int secondsAllowedAsLow = 2;
+                remainingStepCount = (secondsAllowedAsLow * 200 / recorder.getLatencyMillis());
             }
         });
+    }
+
+    private void setVibrating(boolean state) {
+        isVibrating = state;
+
+        if (state)
+            vibrator.vibrate(new long[] { 0, 100, 0 }, 0);
+        else vibrator.cancel();
     }
 
     /**
@@ -618,12 +708,15 @@ public class MainActivity extends AppCompatActivity {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final Statistic statistic = new Statistic(startDate);
-                statistic.setTotalSecondsSnored((long) secondDiff);
-
                 final Record record = new Record();
                 record.setRecordDate(startDate);
                 record.setDurationSeconds(secondDiff);
+
+                final Statistic statistic = new Statistic(
+                        record.getRecordDate().getTime(),
+                        startDate,
+                        (long) secondDiff
+                );
 
                 FileOutputStream fos = null;
                 try {
@@ -728,10 +821,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    public void onBackPressed() {
+        super.onBackPressed();
+
+        saveData();
+        Ringtone currentRingtone = AlarmManager.getCurrentRingtone();
+        if (currentRingtone != null && currentRingtone.isPlaying()) currentRingtone.stop();
+
+        finishAffinity();
+    }
+
+    private void saveData() {
         AlarmManager.saveAlarms(this);
         Statistic.saveStatistics(this, statistics);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        saveData();
+
+        AlarmManager.setPlayingAllowed(false);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        AlarmManager.setPlayingAllowed(true);
     }
 
     @Override

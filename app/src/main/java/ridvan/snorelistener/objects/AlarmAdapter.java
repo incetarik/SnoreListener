@@ -1,5 +1,6 @@
 package ridvan.snorelistener.objects;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.FragmentManager;
 import android.content.DialogInterface;
@@ -26,11 +27,11 @@ import com.wdullaer.materialdatetimepicker.time.TimePickerDialog;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 import ridvan.snorelistener.R;
+import ridvan.snorelistener.helpers.Action;
 
 public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder> {
     private RecyclerView    rvAlarms;
@@ -39,6 +40,17 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
     public AlarmAdapter(RecyclerView rvAlarms, FragmentManager fragmentManager) {
         this.rvAlarms = rvAlarms;
         this.fragmentManager = fragmentManager;
+
+        Action<Alarm> onChangeAction = new Action<Alarm>() {
+            @Override
+            public void call(Alarm obj) {
+                notifyDataSetChanged();
+            }
+        };
+
+        AlarmManager.registerListener(onChangeAction, AlarmManager.AlarmEvent.FINISHED);
+        AlarmManager.registerListener(onChangeAction, AlarmManager.AlarmEvent.ADDED);
+        AlarmManager.registerListener(onChangeAction, AlarmManager.AlarmEvent.UPDATED);
     }
 
     @Override
@@ -52,9 +64,15 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
         if (position == 0) {
             holder.tvAddAlarm.setOnClickListener(new View.OnClickListener() {
                 private Ringtone lastPlayed;
+                private Calendar selectedDateCalendar;
 
                 private void stopRingtone() {
                     if (lastPlayed != null && lastPlayed.isPlaying()) lastPlayed.stop();
+
+                    Ringtone playingRingtone = AlarmManager.getCurrentRingtone();
+                    if (playingRingtone == null || !playingRingtone.isPlaying()) return;
+
+                    playingRingtone.stop();
                 }
 
                 private void askDateTimeFor(final EditText etDateTime) {
@@ -65,12 +83,33 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
                         public void onDateSet(DatePickerDialog view, final int year, final int monthOfYear, final int dayOfMonth) {
                             TimePickerDialog tpd = TimePickerDialog.newInstance(new TimePickerDialog.OnTimeSetListener() {
 
+                                @SuppressLint("DefaultLocale")
                                 @Override
                                 public void onTimeSet(TimePickerDialog view, int hourOfDay, int minute, int second) {
-                                    etDateTime.setText(String.format("%d/%d/%d %d:%d", dayOfMonth, monthOfYear, year, hourOfDay, minute));
+                                    String hodStr = String.valueOf(hourOfDay);
+                                    if (hourOfDay < 10) hodStr = "0" + hodStr;
+
+                                    String minStr = String.valueOf(minute);
+                                    if (minute < 10) minStr = "0" + minute;
+
+                                    selectedDateCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                                    selectedDateCalendar.set(Calendar.MINUTE, minute);
+                                    selectedDateCalendar.set(Calendar.SECOND, 0);
+
+                                    etDateTime.setText(String.format("%d/%d/%d %s:%s",
+                                                                     dayOfMonth,
+                                                                     monthOfYear,
+                                                                     year,
+                                                                     hodStr,
+                                                                     minStr));
                                 }
 
                             }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), true);
+
+                            selectedDateCalendar = Calendar.getInstance();
+                            selectedDateCalendar.set(Calendar.YEAR, year);
+                            selectedDateCalendar.set(Calendar.MONTH, monthOfYear);
+                            selectedDateCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
                             tpd.show(fragmentManager, "Select Time");
                         }
@@ -144,18 +183,31 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
                         public void onClick(View v) {
                             stopRingtone();
                             askDateTimeFor(etDateTime);
-                            alarm.setDate(new Date());
                         }
                     });
 
                     builder.setView(adderView).setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            if (!etDateTime.getText().toString().isEmpty()) {
+                            etTitle.setError(null);
+                            etDateTime.setError(null);
+
+                            if (etTitle.getText().toString().isEmpty()) {
+                                etTitle.setError("Cannot be empty");
+                                return;
+                            }
+
+                            if (etDateTime.getText().toString().isEmpty()) {
+                                etDateTime.setError("Cannot be empty");
+                            }
+                            else {
                                 stopRingtone();
                                 dialog.dismiss();
+
+                                alarm.setTitle(etTitle.getText().toString());
+                                alarm.setDate(selectedDateCalendar.getTime());
+
                                 AlarmManager.addAlarm(alarm);
-                                notifyDataSetChanged();
                             }
                         }
                     }).setOnCancelListener(new DialogInterface.OnCancelListener() {
@@ -177,7 +229,10 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
 
                     alarm.setEnabled(!isEnabled);
 
-                    holder.ivAlarm.setImageDrawable(ContextCompat.getDrawable(rvAlarms.getContext(), (isEnabled ? R.drawable.alarm_normal : R.drawable.alarm_disabled)));
+                    holder.ivAlarm.setImageDrawable(
+                            ContextCompat.getDrawable(
+                                    rvAlarms.getContext(),
+                                    (isEnabled ? R.drawable.alarm_normal : R.drawable.alarm_disabled)));
                 }
             });
 
@@ -187,8 +242,8 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHol
                     int pos = holder.getAdapterPosition();
                     if (pos < 0) return;
 
-                    AlarmManager.removeAlarm(pos);
                     notifyItemRemoved(pos);
+                    AlarmManager.removeAlarm(pos);
                 }
             });
 

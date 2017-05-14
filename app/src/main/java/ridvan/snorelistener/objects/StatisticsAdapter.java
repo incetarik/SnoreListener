@@ -9,14 +9,17 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import ridvan.snorelistener.R;
 import ridvan.snorelistener.helpers.Timer;
 
 public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.StatisticsViewHolder> {
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
     private long                 maximumValue;
-
+    private double               totalRecordedLength;
     private ArrayList<Statistic> statistics;
 
     public StatisticsAdapter() {
@@ -24,30 +27,19 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
     }
 
     public StatisticsAdapter(ArrayList<Statistic> statistics) {
-        this.statistics = statistics;
-
-        for (Statistic statistic : statistics) {
-            if (statistic.getTotalSecondsSnored() > maximumValue) {
-                maximumValue = statistic.getTotalSecondsSnored();
-            }
-        }
-
-        for (Statistic statistic : statistics) {
-            statistic.setPercentage(statistic.getTotalSecondsSnored() * 100.0 / maximumValue);
-        }
-
-        notifyDataSetChanged();
+        setStatistics(statistics);
     }
 
     public StatisticsAdapter addStatistic(Statistic statistic) {
+        if (statistics.contains(statistic)) return this;
         statistics.add(statistic);
 
         if (maximumValue < statistic.getTotalSecondsSnored()) {
             maximumValue = statistic.getTotalSecondsSnored();
         }
 
+        totalRecordedLength += statistic.getTotalSecondsSnored();
         notifyItemInserted(statistics.size());
-        notifyDataSetChanged();
 
         return this;
     }
@@ -58,6 +50,19 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
 
     public void setStatistics(ArrayList<Statistic> statistics) {
         this.statistics = statistics;
+
+        for (Statistic statistic : statistics) {
+            if (statistic.getTotalSecondsSnored() > maximumValue) {
+                maximumValue = statistic.getTotalSecondsSnored();
+            }
+
+            totalRecordedLength += statistic.getTotalSecondsSnored();
+        }
+
+        for (Statistic statistic : statistics) {
+            statistic.setPercentage(statistic.getTotalSecondsSnored() * 100.0 / maximumValue);
+        }
+
         notifyDataSetChanged();
     }
 
@@ -67,7 +72,7 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
         return new StatisticsViewHolder(view);
     }
 
-    @SuppressLint("SetTextI18n")
+    @SuppressLint({ "SetTextI18n", "DefaultLocale" })
     @Override
     public void onBindViewHolder(final StatisticsViewHolder holder, final int position) {
         final int       adapterPos = holder.getAdapterPosition();
@@ -77,13 +82,14 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
             @Override
             public void onClick(View v) {
                 if (adapterPos < 0 || adapterPos >= statistics.size()) return;
-                statistics.remove(adapterPos);
+                double length = statistics.remove(adapterPos).getTotalSecondsSnored();
                 notifyItemRemoved(adapterPos);
 
                 if (statistic.getTotalSecondsSnored() == maximumValue) {
                     maximumValue = getMaximumValue();
                 }
 
+                totalRecordedLength -= length;
                 notifyDataSetChanged();
             }
         });
@@ -96,11 +102,18 @@ public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.St
         else if (minutes > 0) holder.tvTotalDuration.setText(totalTime[1] + "m");
         else holder.tvTotalDuration.setText(totalTime[2] + "s");
 
-        holder.tvStartDate.setText(statistic.getDateTime().toString());
+        double percentageInAll = (statistic.getTotalSecondsSnored() * 100) / totalRecordedLength;
+        holder.tvStartDate.setText(
+                String.format(
+                        "%s | %05.2f %% in Total",
+                        dateFormat.format(statistic.getDateTime()),
+                        percentageInAll
+                )
+        );
 
         holder.progressPercentage.setMax((int) maximumValue);
         holder.progressPercentage.setProgress((int) statistic.getTotalSecondsSnored());
-        holder.tvPercentage.setText(String.valueOf(statistic.getTotalSecondsSnored() * 100.0 / maximumValue) + "%");
+        holder.tvPercentage.setText(String.format("%.2f %%", statistic.getTotalSecondsSnored() * 100.0 / maximumValue));
     }
 
     private long getMaximumValue() {

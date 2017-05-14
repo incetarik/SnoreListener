@@ -2,6 +2,7 @@ package ridvan.snorelistener.objects;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.util.Log;
 import android.util.SparseArray;
 
 import java.io.BufferedReader;
@@ -17,28 +18,46 @@ import java.util.Date;
 
 public class Statistic implements Serializable {
     private static final String STATISTICS_FILE = "Statistics";
-
-    private double percentage;
-    private long   totalSecondsSnored;
-
-    private Date dateTime;
+    private static ArrayList<Statistic> statistics;
+    private        long                 recordId;
+    private        double               percentage;
+    private        long                 totalSecondsSnored;
+    private        Date                 dateTime;
 
     public Statistic() {
+    }
+
+    public Statistic(long recordId, Date dateTime, long totalSecondsSnored, double percentage) {
+        this(dateTime, totalSecondsSnored, percentage);
+        this.recordId = recordId;
+    }
+
+    public Statistic(Date dateTime, long totalSecondsSnored, double percentage) {
+        this(dateTime, totalSecondsSnored);
+        this.percentage = percentage;
+    }
+
+    public Statistic(Date dateTime, long totalSecondsSnored) {
+        this(dateTime);
+        this.totalSecondsSnored = totalSecondsSnored;
     }
 
     public Statistic(Date dateTime) {
         this.dateTime = dateTime;
     }
 
-    public Statistic(Date dateTime, long totalSecondsSnored) {
-        this.dateTime = dateTime;
+    public Statistic(long recordId, Date dateTime, long totalSecondsSnored) {
+        this(recordId, dateTime);
         this.totalSecondsSnored = totalSecondsSnored;
     }
 
-    public Statistic(Date dateTime, long totalSecondsSnored, double percentage) {
+    public Statistic(long recordId, Date dateTime) {
+        this.recordId = recordId;
         this.dateTime = dateTime;
-        this.totalSecondsSnored = totalSecondsSnored;
-        this.percentage = percentage;
+    }
+
+    public static ArrayList<Statistic> getStatistics() {
+        return statistics;
     }
 
     /**
@@ -80,6 +99,10 @@ public class Statistic implements Serializable {
         return this;
     }
 
+    public static boolean saveStatistics(Context context) {
+        return saveStatistics(context, statistics);
+    }
+
     /**
      * Saves given statistics list to the storage by given context
      *
@@ -89,6 +112,7 @@ public class Statistic implements Serializable {
      * @return true if successfully saved
      */
     public static boolean saveStatistics(Context context, ArrayList<Statistic> statistics) {
+        Log.d("Statistic", "Statistics are saving...");
         FileOutputStream fos    = null;
         boolean          retVal = false;
 
@@ -134,6 +158,7 @@ public class Statistic implements Serializable {
      * @return Pre-saved statistics, even not saved before, will return empty array
      */
     public static ArrayList<Statistic> loadStatistics(Context context) {
+        Log.d("Statistic", "Loading statistics...");
         FileInputStream      fis        = null;
         ArrayList<Statistic> statistics = new ArrayList<>();
 
@@ -149,7 +174,10 @@ public class Statistic implements Serializable {
 
                 if (parts.length != 3) continue;
 
-                statistics.add(new Statistic(new Date(Long.parseLong(parts[0]))).setTotalSecondsSnored(Long.parseLong(parts[1])).setPercentage(Double.parseDouble(parts[2])));
+                statistics.add(
+                        new Statistic(new Date(Long.parseLong(parts[0])))
+                                .setTotalSecondsSnored(Long.parseLong(parts[1]))
+                                .setPercentage(Double.parseDouble(parts[2])));
             }
         }
         catch (IOException e) {
@@ -166,7 +194,16 @@ public class Statistic implements Serializable {
             }
         }
 
+        Statistic.statistics = statistics;
         return statistics;
+    }
+
+    public long getRecordId() {
+        return recordId;
+    }
+
+    public void setRecordId(long recordId) {
+        this.recordId = recordId;
     }
 
     public long getTotalSecondsSnored() {

@@ -3,6 +3,7 @@ package ridvan.snorelistener.objects;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.util.Log;
 
 import java.util.ArrayList;
 
@@ -173,6 +174,7 @@ public class AudioRecorder {
 
     public void setListening(boolean listening) {
         isListening = listening;
+        Log.d("AudioRecorder", "Listening state changed to " + listening);
     }
 
     private AudioRecord getOrCreateAudioRecord() {

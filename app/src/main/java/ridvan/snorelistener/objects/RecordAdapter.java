@@ -5,6 +5,7 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -50,9 +51,39 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
 
         // Update and show the newly inserted record
         notifyItemInserted(getItemCount());
+        notifyDataSetChanged();
 
         // Return itself to allow chaining
         return this;
+    }
+
+    public RecordAdapter removeRecord(Record record) {
+        int index = records.indexOf(record);
+        if (index < 0) return this;
+
+        records.remove(index);
+
+        notifyItemRemoved(index);
+        notifyDataSetChanged();
+        removeStatistic(record);
+
+        // Return itself to allow chaining
+        return this;
+    }
+
+    private void removeStatistic(Record record) {
+        Log.d("RecordAdapter", String.format("Removing statistic for Record(%s)", record.getFileName()));
+
+        ArrayList<Statistic> statistics = Statistic.getStatistics();
+        if (statistics == null) return;
+
+        for (int i = statistics.size() - 1; i >= 0; i--) {
+            Statistic statistic = statistics.get(i);
+            if (statistic.getRecordId() == record.getRecordDate().getTime()) {
+                statistics.remove(i);
+                break;
+            }
+        }
     }
 
     @Override
@@ -182,8 +213,7 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
                 int adapterPos = holder.getAdapterPosition();
                 if (adapterPos < 0) return;
 
-                records.remove(adapterPos);
-                notifyItemRemoved(adapterPos);
+                removeRecord(record);
 
                 if (adapterPos < lastPlayingPosition) lastPlayingPosition--;
                 if (adapterPos != lastPlayingPosition) return;

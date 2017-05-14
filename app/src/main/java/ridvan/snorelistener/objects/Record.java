@@ -8,8 +8,7 @@ public class Record {
     private String fileName;
     private byte[] audioData;
     private double durationSeconds;
-
-    private Date recordDate;
+    private Date   recordDate;
 
     public Record() {
         setFileName("");
