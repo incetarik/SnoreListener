@@ -1,6 +1,8 @@
 package ridvan.snorelistener.activities;
 
 import android.animation.Animator;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
@@ -61,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isAudioPlaying;
     private boolean isVibrationEnabled;
     private boolean isWearVibrationEnabled;
+    private int notificationLimit = 20;
 
     private ViewPager viewPager;
     private TextView  tvAlarmsInfo;
@@ -85,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayList<Statistic> statistics;
     private TeleportClient       teleportClient;
+    private NotificationManager  notificationManager;
+    private Notification         notification;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -700,10 +705,9 @@ public class MainActivity extends AppCompatActivity {
     private void trySaveRecord() {
         if (recorder.getRecordingStartDate() < 0) return;
 
-        Date                  endDate        = new Date();
         final Date            startDate      = new Date(recorder.getRecordingStartDate());
-        final double          secondDiff     = ((endDate.getTime() - startDate.getTime()) / 1000.0);
         final ArrayList<Byte> recordingBytes = new ArrayList<>(recorder.getRecordingBytes());
+        final double          secondDiff     = (recordingBytes.size() / AudioRecorder.SAMPLE_RATE);
 
         if (secondDiff < AudioRecorder.MINIMUM_AUDIO_LENGTH) {
             recorder.resetRecordingBytes();
@@ -795,6 +799,29 @@ public class MainActivity extends AppCompatActivity {
     private void syncVibration(boolean vibrationState) {
         if (!isWearVibrationEnabled) return;
         teleportClient.syncBoolean(Context.VIBRATOR_SERVICE, vibrationState);
+
+        Log.d("MainActivity", "Remaining notification Limit: " + notificationLimit);
+        if (--notificationLimit > 0) return;
+        notificationLimit = 20;
+
+        if (notificationManager == null)
+            notificationManager = ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE));
+
+        if (vibrationState) {
+            if (notification == null) {
+                notification = new Notification.Builder(this)
+                        .setAutoCancel(true)
+                        .setContentTitle("SnoreListener")
+                        .setTicker("SnoreListener")
+                        .setSmallIcon(R.drawable.mic)
+                        .setVibrate(new long[] { 0, 100, 0, 100 })
+                        .build();
+            }
+
+            notificationManager.notify(hashCode(), notification);
+        }
+
+        notificationManager.cancel(hashCode());
     }
 
     private void requestPermission() {

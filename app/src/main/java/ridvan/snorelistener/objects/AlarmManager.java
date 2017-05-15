@@ -126,8 +126,9 @@ public class AlarmManager {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
                 .setSmallIcon(R.drawable.logo)
-                .setAutoCancel(true)
                 .setDefaults(Notification.DEFAULT_VIBRATE)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setTicker(alarm.getTitle())
                 .setContentTitle(alarm.getTitle());
 
         if (alarm.isVibrationEnabled())
