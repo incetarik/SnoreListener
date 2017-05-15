@@ -19,6 +19,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import ridvan.snorelistener.R;
 import ridvan.snorelistener.helpers.Action;
@@ -35,6 +37,7 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
     private AudioTrack        track;
     private ArrayList<Record> records;
     private Action<Boolean>   stateAction;
+    private Action<Record>    onRecordRemoved;
 
     public RecordAdapter(final RecyclerView rv, Action<Boolean> stateAction) {
         // Initializing audio record list
@@ -45,16 +48,37 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
         this.stateAction = stateAction;
     }
 
+    public Action<Record> getOnRecordRemoved() {
+        return onRecordRemoved;
+    }
+
+    public RecordAdapter setOnRecordRemoved(Action<Record> onRecordRemoved) {
+        this.onRecordRemoved = onRecordRemoved;
+        return this;
+    }
+
     public RecordAdapter addRecord(Record record) {
         // Add the record
         records.add(record);
 
+        sort();
+        int pos = records.indexOf(record);
+
         // Update and show the newly inserted record
-        notifyItemInserted(getItemCount());
-        notifyDataSetChanged();
+        notifyItemInserted(pos);
+        if (track != null) notifyDataSetChanged();
 
         // Return itself to allow chaining
         return this;
+    }
+
+    private void sort() {
+        Collections.sort(records, new Comparator<Record>() {
+            @Override
+            public int compare(Record o1, Record o2) {
+                return -o1.getRecordDate().compareTo(o2.getRecordDate());
+            }
+        });
     }
 
     public RecordAdapter removeRecord(Record record) {
@@ -62,9 +86,11 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
         if (index < 0) return this;
 
         records.remove(index);
+        getOnRecordRemoved().call(record);
 
         notifyItemRemoved(index);
-        notifyDataSetChanged();
+        if (track != null) notifyDataSetChanged();
+
         removeStatistic(record);
 
         // Return itself to allow chaining
@@ -81,6 +107,7 @@ public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItem
             Statistic statistic = statistics.get(i);
             if (statistic.getRecordId() == record.getRecordDate().getTime()) {
                 statistics.remove(i);
+                Log.d("RecordAdapter", "Statistic removed");
                 break;
             }
         }

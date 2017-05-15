@@ -432,7 +432,13 @@ public class MainActivity extends AppCompatActivity {
 
         rvRecords = (RecyclerView) view.findViewById(R.id.rvRecords);
         rvRecords.setLayoutManager(new LinearLayoutManager(this));
-        rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords, onAudioStateChanged));
+        rvRecords.setAdapter(recordAdapter = new RecordAdapter(rvRecords, onAudioStateChanged).setOnRecordRemoved(new Action<Record>() {
+            @Override
+            public void call(Record obj) {
+                if (statisticsAdapter != null)
+                    statisticsAdapter.notifyDataSetChanged();
+            }
+        }));
 
         addPreSavedFiles();
     }
@@ -671,7 +677,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             private void refreshRemainingSteps() {
-                int secondsAllowedAsLow = 2;
+                int secondsAllowedAsLow = 1;
                 remainingStepCount = (secondsAllowedAsLow * 200 / recorder.getLatencyMillis());
             }
         });
@@ -752,6 +758,12 @@ public class MainActivity extends AppCompatActivity {
                                         @Override
                                         public void call(Boolean obj) {
                                             isAudioPlaying = obj;
+                                        }
+                                    }).setOnRecordRemoved(new Action<Record>() {
+                                        @Override
+                                        public void call(Record obj) {
+                                            if (statisticsAdapter != null)
+                                                statisticsAdapter.notifyDataSetChanged();
                                         }
                                     }));
                                 }

@@ -35,7 +35,8 @@ public class AlarmManager {
     public static ridvan.snorelistener.helpers.Timer Timer = null;
     private static boolean  timerInitialized;
     private static Ringtone currentRingtone;
-    private static boolean playingAllowed = true;
+    private static boolean playingAllowed      = true;
+    private static boolean alarmUpdateRequired = false;
 
     public static Ringtone getCurrentRingtone() {
         return currentRingtone;
@@ -84,10 +85,11 @@ public class AlarmManager {
 
                 @Override
                 public void run() {
-                    if (nextAlarm == null) {
+                    if (nextAlarm == null || alarmUpdateRequired) {
                         if ((nextAlarm = getNextAlarm()) == null) return;
 
                         remainingSeconds = (nextAlarm.getDate().getTime() - new Date().getTime()) / 1000;
+                        alarmUpdateRequired = false;
                     }
                     else if (--remainingSeconds <= 0) {
                         startAlarm(nextAlarm);
@@ -226,6 +228,7 @@ public class AlarmManager {
     }
 
     public static void sort() {
+        alarmUpdateRequired = true;
         Collections.sort(ALARMS, new Comparator<Alarm>() {
             @Override
             public int compare(Alarm o1, Alarm o2) {
