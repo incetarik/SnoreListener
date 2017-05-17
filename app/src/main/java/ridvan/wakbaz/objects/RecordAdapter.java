@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.graphics.Color;
 import android.media.AudioFormat;
@@ -22,9 +22,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Action;
-import ridvan.snorelistener.helpers.Timer;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Action;
+import ridvan.wakbaz.helpers.Timer;
 
 public class RecordAdapter extends RecyclerView.Adapter<RecordAdapter.RecordItemHolder> {
     private static final int PLAY_ID  = android.R.drawable.ic_media_play;

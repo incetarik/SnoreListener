@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
@@ -7,7 +7,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 
-import ridvan.snorelistener.helpers.SoundLevelListener;
+import ridvan.wakbaz.helpers.SoundLevelListener;
 
 public class AudioRecorder {
     public static final int    SAMPLE_RATE          = 44100;

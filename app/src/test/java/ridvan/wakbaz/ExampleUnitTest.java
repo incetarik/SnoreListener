@@ -1,4 +1,4 @@
-package ridvan.snorelistener;
+package ridvan.wakbaz;
 
 import org.junit.Test;
 

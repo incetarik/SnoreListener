@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

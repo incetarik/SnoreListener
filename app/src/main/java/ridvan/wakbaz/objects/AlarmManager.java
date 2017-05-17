@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -23,16 +23,16 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 
-import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Action;
-import ridvan.snorelistener.helpers.Function;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Action;
+import ridvan.wakbaz.helpers.Function;
 
 public class AlarmManager {
     private static final String                                        ALARMS_FILE  = "Alarms";
     private static final ArrayList<Alarm>                              ALARMS       = new ArrayList<>();
     private static final HashMap<AlarmEvent, ArrayList<Action<Alarm>>> ALARM_EVENTS = new HashMap<>();
     public static Function<Context> ContextGetter;
-    public static ridvan.snorelistener.helpers.Timer Timer = null;
+    public static ridvan.wakbaz.helpers.Timer Timer = null;
     private static boolean  timerInitialized;
     private static Ringtone currentRingtone;
     private static boolean playingAllowed      = true;

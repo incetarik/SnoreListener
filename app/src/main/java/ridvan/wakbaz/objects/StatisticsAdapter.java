@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.annotation.SuppressLint;
 import android.support.v7.widget.RecyclerView;
@@ -13,8 +13,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Timer;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Timer;
 
 public class StatisticsAdapter extends RecyclerView.Adapter<StatisticsAdapter.StatisticsViewHolder> {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());

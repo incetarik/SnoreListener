@@ -1,4 +1,4 @@
-package ridvan.snorelistener.views;
+package ridvan.wakbaz.views;
 
 import android.content.Context;
 import android.graphics.Canvas;

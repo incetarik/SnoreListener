@@ -1,4 +1,4 @@
-package ridvan.snorelistener.activities;
+package ridvan.wakbaz.activities;
 
 import android.animation.Animator;
 import android.app.Notification;
@@ -39,20 +39,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 
-import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Action;
-import ridvan.snorelistener.helpers.Function;
-import ridvan.snorelistener.helpers.SoundLevelListener;
-import ridvan.snorelistener.helpers.Timer;
-import ridvan.snorelistener.objects.Alarm;
-import ridvan.snorelistener.objects.AlarmAdapter;
-import ridvan.snorelistener.objects.AlarmManager;
-import ridvan.snorelistener.objects.AudioRecorder;
-import ridvan.snorelistener.objects.Record;
-import ridvan.snorelistener.objects.RecordAdapter;
-import ridvan.snorelistener.objects.Statistic;
-import ridvan.snorelistener.objects.StatisticsAdapter;
-import ridvan.snorelistener.views.SoundMeterView;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Action;
+import ridvan.wakbaz.helpers.Function;
+import ridvan.wakbaz.helpers.SoundLevelListener;
+import ridvan.wakbaz.helpers.Timer;
+import ridvan.wakbaz.objects.Alarm;
+import ridvan.wakbaz.objects.AlarmAdapter;
+import ridvan.wakbaz.objects.AlarmManager;
+import ridvan.wakbaz.objects.AudioRecorder;
+import ridvan.wakbaz.objects.Record;
+import ridvan.wakbaz.objects.RecordAdapter;
+import ridvan.wakbaz.objects.Statistic;
+import ridvan.wakbaz.objects.StatisticsAdapter;
+import ridvan.wakbaz.views.SoundMeterView;
 
 import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -800,7 +800,7 @@ public class MainActivity extends AppCompatActivity {
         if (!isWearVibrationEnabled) return;
         teleportClient.syncBoolean(Context.VIBRATOR_SERVICE, vibrationState);
 
-        Log.d("MainActivity", "Remaining notification Limit: " + notificationLimit);
+        Log.d("MainActivity", "Remaining notification limit: " + notificationLimit);
         if (--notificationLimit > 0) return;
         notificationLimit = 20;
 

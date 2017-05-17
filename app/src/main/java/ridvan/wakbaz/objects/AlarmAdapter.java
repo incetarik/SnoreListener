@@ -1,4 +1,4 @@
-package ridvan.snorelistener.objects;
+package ridvan.wakbaz.objects;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -30,8 +30,8 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import ridvan.snorelistener.R;
-import ridvan.snorelistener.helpers.Action;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Action;
 
 public class AlarmAdapter extends RecyclerView.Adapter<AlarmAdapter.AlarmViewHolder> {
     private RecyclerView    rvAlarms;
