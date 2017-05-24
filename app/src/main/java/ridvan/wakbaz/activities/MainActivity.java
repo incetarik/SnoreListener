@@ -8,11 +8,7 @@ import android.content.pm.PackageManager;
 import android.database.DataSetObserver;
 import android.graphics.drawable.Drawable;
 import android.media.Ringtone;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Vibrator;
+import android.os.*;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -25,34 +21,21 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
-import android.widget.ImageView;
-import android.widget.Switch;
-import android.widget.TextView;
-import android.widget.Toast;
-
+import android.widget.*;
 import com.mariux.teleport.lib.TeleportClient;
+import ridvan.wakbaz.R;
+import ridvan.wakbaz.helpers.Action;
+import ridvan.wakbaz.helpers.Function;
+import ridvan.wakbaz.helpers.SoundLevelListener;
+import ridvan.wakbaz.helpers.Timer;
+import ridvan.wakbaz.objects.*;
+import ridvan.wakbaz.views.SoundMeterView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
-
-import ridvan.wakbaz.R;
-import ridvan.wakbaz.helpers.Action;
-import ridvan.wakbaz.helpers.Function;
-import ridvan.wakbaz.helpers.SoundLevelListener;
-import ridvan.wakbaz.helpers.Timer;
-import ridvan.wakbaz.objects.Alarm;
-import ridvan.wakbaz.objects.AlarmAdapter;
-import ridvan.wakbaz.objects.AlarmManager;
-import ridvan.wakbaz.objects.AudioRecorder;
-import ridvan.wakbaz.objects.Record;
-import ridvan.wakbaz.objects.RecordAdapter;
-import ridvan.wakbaz.objects.Statistic;
-import ridvan.wakbaz.objects.StatisticsAdapter;
-import ridvan.wakbaz.views.SoundMeterView;
 
 import static android.Manifest.permission.RECORD_AUDIO;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
@@ -241,11 +224,18 @@ public class MainActivity extends AppCompatActivity {
         tvAlarmsInfo.setText(String.format(getString(R.string.alarms_count), AlarmManager.getAlarmCount()));
 
         ivRecordButton.setOnClickListener(new View.OnClickListener() {
+            private boolean isWaiting = true;
+            private Thread waitingThread = null;
             @Override
             public void onClick(View v) {
                 if (isRecording) {
                     recorder.stopListening();
                     trySaveRecord();
+
+                    recorder.setRecordingStartDate(-1);
+                    recorder.resetRecordingBytes();
+                    recorder.init();
+
                     Toast.makeText(MainActivity.this, "Recording stopped, statistics will be generated", 1).show();
                     isRecording = false;
 
@@ -254,6 +244,7 @@ public class MainActivity extends AppCompatActivity {
 
                     ivRecordButton.setImageDrawable(ContextCompat.getDrawable(MainActivity.this, R.drawable.mic));
                     tvRecordDuration.setText(getString(R.string.duration_initial));
+                    soundMeter.clearDraw();
                     return;
                 }
 
@@ -622,6 +613,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!soundMeter.clearDraw()) return;
 
                     runOnUiThread(new Runnable() {
+                        @SuppressWarnings("WrongConstant")
                         @Override
                         public void run() {
                             Toast.makeText(MainActivity.this, "Cannot listen while audio is playing!", 1).show();

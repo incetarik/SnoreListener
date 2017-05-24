@@ -4,15 +4,14 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
+import ridvan.wakbaz.helpers.SoundLevelListener;
 
 import java.util.ArrayList;
-
-import ridvan.wakbaz.helpers.SoundLevelListener;
 
 public class AudioRecorder {
     public static final int    SAMPLE_RATE          = 44100;
     public static final double BASE_VALUE           = 6.8;
-    public static final double DB_LEVEL_TO_VIBRATE  = 40;
+    public static final double DB_LEVEL_TO_VIBRATE = 50;
     public static final int    MINIMUM_AUDIO_LENGTH = 5;
     public static final int    BUFFER_SIZE          = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 
@@ -29,12 +28,6 @@ public class AudioRecorder {
 
     public AudioRecorder() {
         init();
-    }
-
-    private void init() {
-        recordingBytes = new ArrayList<>(8192);
-        buffer = new short[BUFFER_SIZE];
-        setLatencyMillis(10);
     }
 
     /**
@@ -57,6 +50,12 @@ public class AudioRecorder {
         }
         return bytes;
 
+    }
+
+    public void init() {
+        recordingBytes = new ArrayList<>(8192);
+        buffer = new short[BUFFER_SIZE];
+        setLatencyMillis(10);
     }
 
     public short[] getBuffer() {
@@ -100,10 +99,7 @@ public class AudioRecorder {
             }
         }
 
-        setRecordingStartDate(-1);
-        resetRecordingBytes();
         setStarted(false);
-        init();
 
         if (listenerThread != null) {
             listenerThread.interrupt();

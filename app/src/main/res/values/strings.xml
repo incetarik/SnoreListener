@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">Snore Listener</string>
+    <string name="app_name">Wakbaz</string>
     <string name="alarms_count">You have %d alarms set</string>
     <string name="start_recording">Start Recording</string>
     <string name="duration_initial">00:00:00</string>
-    <string name="page_main_title">Ridvan Akbazli Snore Listener</string>
+    <string name="page_main_title">Ridvan wakbaz Snore Listener</string>
     <string name="vibration">Vibration</string>
     <string name="title">Title</string>
     <string name="date">Date</string>
@@ -13,6 +13,6 @@
     <string name="splash_2">Place your device close to your pillow</string>
     <string name="splash_3">Please keep the device connected to the power source</string>
     <string name="click_to_continue">Click to continue</string>
-    <string name="visit_us">Visit Us</string>
+    <string name="visit_us">visit our site</string>
     <string name="vibration_for_wear">Vibration for Wear</string>
 </resources>

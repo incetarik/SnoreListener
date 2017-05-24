@@ -23,10 +23,10 @@
         <activity android:name="ridvan.wakbaz.activities.MainActivity">
         </activity>
         <activity
-            android:name="ridvan.wakbaz.activities.SplashActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:label="Snore Listener"
-            android:theme="@style/Transparent">
+                android:name="ridvan.wakbaz.activities.SplashActivity"
+                android:configChanges="orientation|keyboardHidden|screenSize"
+                android:label="Wakbaz"
+                android:theme="@style/Transparent">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
